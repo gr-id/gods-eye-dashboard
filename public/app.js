@@ -2,15 +2,15 @@ const FEAR_GREED_API_URL = "https://api.alternative.me/fng/?limit=1";
 const FEAR_GREED_FALLBACK_SECONDS = 900;
 const FEAR_GREED_INITIAL_RETRY_SECONDS = 30;
 const WIDGET_LOAD_TIMEOUT_MS = 12000;
-const USE_DIRECT_CHARTS = true;
+const USE_DIRECT_CHARTS = false;
 
 const MARKET_SYMBOLS = {
   BTC: { tv: "BINANCE:BTCUSDT", title: "BTC/USD" },
-  VIX: { tv: "CBOE:VIX", title: "VIX" },
-  DXY: { tv: "INDEX:DXY", title: "DXY" },
-  US10Y: { tv: "CBOE:TNX", title: "US10Y" },
-  NDX: { tv: "NASDAQ:NDX", title: "Nasdaq 100" },
-  SPX: { tv: "SP:SPX", title: "S&P 500" },
+  VIX: { tv: "AMEX:VXX", title: "VIX Proxy" },
+  DXY: { tv: "AMEX:UUP", title: "DXY Proxy" },
+  US10Y: { tv: "AMEX:IEF", title: "US10Y Proxy" },
+  NDX: { tv: "NASDAQ:QQQ", title: "Nasdaq 100 Proxy" },
+  SPX: { tv: "AMEX:SPY", title: "S&P 500 Proxy" },
 };
 
 const WIDGETS = [
