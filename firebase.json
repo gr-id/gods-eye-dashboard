@@ -1,0 +1,12 @@
+{
+  "hosting": {
+    "site": "godseye-dashboard",
+    "public": "public",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ],
+    "cleanUrls": true
+  }
+}

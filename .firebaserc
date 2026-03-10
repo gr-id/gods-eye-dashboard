@@ -1,0 +1,15 @@
+{
+  "projects": {
+    "default": "godseye-dashboard"
+  },
+  "targets": {
+    "godseye-dashboard": {
+      "hosting": {
+        "default": [
+          "godseye-dashboard"
+        ]
+      }
+    }
+  },
+  "etags": {}
+}

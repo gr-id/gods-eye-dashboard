@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>God's Eye Dashboard</title>
+    <meta
+      name="description"
+      content="BTC, VIX, DXY, US10Y, Nasdaq 100, S&P 500 및 Fear & Greed를 한 화면에서 모니터링하는 대시보드"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com" defer></script>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body class="antialiased">
+    <div class="bg-orb bg-orb-left"></div>
+    <div class="bg-orb bg-orb-right"></div>
+
+    <header class="page-header mx-auto max-w-[1800px]">
+      <div>
+        <p class="eyebrow">Market Correlation Viewport</p>
+        <h1>God's Eye</h1>
+      </div>
+      <p class="header-note">핵심 지표를 한 화면에서 추적</p>
+    </header>
+
+    <main class="dashboard-grid mx-auto max-w-[1800px]">
+      <section class="card card-main">
+        <div class="card-title-row">
+          <h2>BTC/USD 메인 차트</h2>
+          <span class="chip chip-primary">주요 지표</span>
+        </div>
+        <div id="chart-btc" class="widget-host widget-host-main"></div>
+        <p id="status-btc" class="widget-status" hidden>
+          BTC 차트 로딩이 지연되고 있습니다.
+        </p>
+      </section>
+
+      <section class="card card-fng">
+        <div class="card-title-row">
+          <h2>Fear &amp; Greed</h2>
+          <span id="fng-badge" class="chip chip-muted">로딩 중</span>
+        </div>
+        <div class="fng-body">
+          <p id="fng-value" class="fng-value">N/A</p>
+          <p id="fng-classification" class="fng-classification">데이터 수집 대기</p>
+          <p id="fng-updated" class="fng-updated">업데이트: -</p>
+          <p id="fng-status" class="fng-status">상태: 초기화 중</p>
+        </div>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>VIX</h2>
+          <span class="chip">변동성</span>
+        </div>
+        <div id="chart-vix" class="widget-host widget-host-secondary"></div>
+        <p id="status-vix" class="widget-status" hidden>VIX 차트 로딩 지연</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>DXY</h2>
+          <span class="chip">달러 인덱스</span>
+        </div>
+        <div id="chart-dxy" class="widget-host widget-host-secondary"></div>
+        <p id="status-dxy" class="widget-status" hidden>DXY 차트 로딩 지연</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>US10Y</h2>
+          <span class="chip">거시 금리</span>
+        </div>
+        <div id="chart-us10y" class="widget-host widget-host-secondary"></div>
+        <p id="status-us10y" class="widget-status" hidden>US10Y 차트 로딩 지연</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>Nasdaq 100</h2>
+          <span class="chip">Equity</span>
+        </div>
+        <div id="chart-ndx" class="widget-host widget-host-secondary"></div>
+        <p id="status-ndx" class="widget-status" hidden>Nasdaq 100 차트 로딩 지연</p>
+      </section>
+
+      <section class="card">
+        <div class="card-title-row">
+          <h2>S&amp;P 500</h2>
+          <span class="chip">Equity</span>
+        </div>
+        <div id="chart-spx" class="widget-host widget-host-secondary"></div>
+        <p id="status-spx" class="widget-status" hidden>S&amp;P 500 차트 로딩 지연</p>
+      </section>
+    </main>
+
+    <section class="ticker-floating" aria-label="실시간 티커">
+      <div class="ticker-floating-inner">
+        <div class="tradingview-widget-container ticker-host">
+          <div id="ticker-widget" class="tradingview-widget-container__widget"></div>
+        </div>
+        <p id="ticker-status" class="widget-status" hidden>
+          티커 위젯 로딩이 지연되고 있습니다.
+        </p>
+      </div>
+    </section>
+  </body>
+</html>
