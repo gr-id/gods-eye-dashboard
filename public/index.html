@@ -1,4 +1,4 @@
-<!doctype html>
+﻿<!doctype html>
 <html lang="ko">
   <head>
     <meta charset="UTF-8" />
@@ -27,79 +27,24 @@
         <p class="eyebrow">Market Correlation Viewport</p>
         <h1>God's Eye</h1>
       </div>
-      <p class="header-note">핵심 지표를 한 화면에서 추적</p>
+      <div class="header-actions">
+        <button id="edit-toggle-btn" class="btn btn-outline" type="button">변경</button>
+      </div>
     </header>
 
-    <main class="dashboard-grid mx-auto max-w-[1800px]">
-      <section class="card card-main">
-        <div class="card-title-row">
-          <h2>BTC/USD 메인 차트</h2>
-          <span class="chip chip-primary">주요 지표</span>
-        </div>
-        <div id="chart-btc" class="widget-host widget-host-main"></div>
-        <p id="status-btc" class="widget-status" hidden>
-          BTC 차트 로딩이 지연되고 있습니다.
-        </p>
-      </section>
+    <section id="layout-toolbar" class="layout-toolbar card mx-auto max-w-[1800px]" hidden>
+      <div class="layout-toolbar-actions">
+        <button id="layout-save-btn" class="btn btn-primary" type="button">저장</button>
+        <button id="layout-cancel-btn" class="btn btn-outline" type="button">취소</button>
+        <button id="layout-add-btn" class="btn btn-outline" type="button">추가</button>
+        <button id="layout-ai-add-btn" class="btn btn-outline" type="button">AI 추가</button>
+      </div>
+      <p class="layout-toolbar-note">
+        현재 차트 엔진은 TradingView iframe 기준으로 동작하며 차트 간 커서 점선 동기화는 지원하지 않습니다.
+      </p>
+    </section>
 
-      <section class="card card-fng">
-        <div class="card-title-row">
-          <h2>Fear &amp; Greed</h2>
-          <span id="fng-badge" class="chip chip-muted">로딩 중</span>
-        </div>
-        <div class="fng-body">
-          <p id="fng-value" class="fng-value">N/A</p>
-          <p id="fng-classification" class="fng-classification">데이터 수집 대기</p>
-          <p id="fng-updated" class="fng-updated">업데이트: -</p>
-          <p id="fng-status" class="fng-status">상태: 초기화 중</p>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>VIX</h2>
-          <span class="chip">변동성</span>
-        </div>
-        <div id="chart-vix" class="widget-host widget-host-secondary"></div>
-        <p id="status-vix" class="widget-status" hidden>VIX 차트 로딩 지연</p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>DXY</h2>
-          <span class="chip">달러 인덱스</span>
-        </div>
-        <div id="chart-dxy" class="widget-host widget-host-secondary"></div>
-        <p id="status-dxy" class="widget-status" hidden>DXY 차트 로딩 지연</p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>US10Y</h2>
-          <span class="chip">거시 금리</span>
-        </div>
-        <div id="chart-us10y" class="widget-host widget-host-secondary"></div>
-        <p id="status-us10y" class="widget-status" hidden>US10Y 차트 로딩 지연</p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>Nasdaq 100</h2>
-          <span class="chip">Equity</span>
-        </div>
-        <div id="chart-ndx" class="widget-host widget-host-secondary"></div>
-        <p id="status-ndx" class="widget-status" hidden>Nasdaq 100 차트 로딩 지연</p>
-      </section>
-
-      <section class="card">
-        <div class="card-title-row">
-          <h2>S&amp;P 500</h2>
-          <span class="chip">Equity</span>
-        </div>
-        <div id="chart-spx" class="widget-host widget-host-secondary"></div>
-        <p id="status-spx" class="widget-status" hidden>S&amp;P 500 차트 로딩 지연</p>
-      </section>
-    </main>
+    <main id="dashboard-grid" class="dashboard-grid mx-auto max-w-[1800px]"></main>
 
     <section class="ticker-floating" aria-label="실시간 티커">
       <div class="ticker-floating-inner">
@@ -111,5 +56,34 @@
         </p>
       </div>
     </section>
+
+    <div id="symbol-modal" class="modal-root" hidden>
+      <div class="modal-backdrop" data-close-modal="symbol"></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="symbol-modal-title">
+        <h2 id="symbol-modal-title">심볼 추가</h2>
+        <label class="field-label" for="symbol-input">거래소:심볼</label>
+        <input id="symbol-input" class="field-input" type="text" placeholder="예: NASDAQ:TSLA" />
+        <label class="field-label" for="title-input">표시명</label>
+        <input id="title-input" class="field-input" type="text" placeholder="예: Tesla" />
+        <p id="symbol-modal-error" class="field-error" hidden></p>
+        <div class="modal-actions">
+          <button id="symbol-modal-submit" class="btn btn-primary" type="button">추가</button>
+          <button id="symbol-modal-cancel" class="btn btn-outline" type="button">닫기</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="ai-modal" class="modal-root" hidden>
+      <div class="modal-backdrop" data-close-modal="ai"></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
+        <h2 id="ai-modal-title">AI 추천 심볼</h2>
+        <p id="ai-modal-status" class="ai-modal-status">추천 목록을 준비하는 중입니다.</p>
+        <div id="ai-suggest-list" class="ai-suggest-list"></div>
+        <div class="modal-actions">
+          <button id="ai-modal-apply" class="btn btn-primary" type="button">선택 반영</button>
+          <button id="ai-modal-cancel" class="btn btn-outline" type="button">닫기</button>
+        </div>
+      </section>
+    </div>
   </body>
 </html>
