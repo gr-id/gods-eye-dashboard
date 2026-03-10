@@ -9,7 +9,7 @@ BTC/USD, VIX, DXY, US10Y, Nasdaq 100, S&P 500과 Fear & Greed Index를 한 화�
 - Tailwind CSS (CDN)
 - TradingView Embed Widgets
 - Firebase Functions + Firestore
-- Gemini API + NewsAPI + FRED
+- Gemini API + Google News RSS + FRED
 - Alternative.me Fear & Greed API
 - Firebase Hosting
 
@@ -30,7 +30,6 @@ PowerShell 정책 때문에 `firebase`와 `npm` 실행이 막히는 환경에서
 cmd /c firebase login
 cmd /c firebase projects:create godseye-dashboard -n GodsEyeDashboard
 cmd /c firebase functions:secrets:set GEMINI_API_KEY
-cmd /c firebase functions:secrets:set NEWSAPI_KEY
 cmd /c firebase functions:secrets:set FRED_API_KEY
 cmd /c firebase functions:secrets:set LAYOUT_ADMIN_PIN
 cmd /c firebase deploy --only functions,hosting --project <projectId>

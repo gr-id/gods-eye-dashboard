@@ -4,13 +4,15 @@ const logger = require("firebase-functions/logger");
 const { defineSecret } = require("firebase-functions/params");
 const { initializeApp } = require("firebase-admin/app");
 const { getFirestore } = require("firebase-admin/firestore");
+const { XMLParser } = require("fast-xml-parser");
 
 initializeApp();
 const db = getFirestore();
 const LAYOUT_DOC = db.collection("layouts").doc("global");
+const GOOGLE_NEWS_RSS_URL =
+  "https://news.google.com/rss/search?q=stock+market+OR+federal+reserve+OR+inflation+OR+bitcoin&hl=en-US&gl=US&ceid=US:en";
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
-const NEWSAPI_KEY = defineSecret("NEWSAPI_KEY");
 const FRED_API_KEY = defineSecret("FRED_API_KEY");
 const LAYOUT_ADMIN_PIN = defineSecret("LAYOUT_ADMIN_PIN");
 
@@ -249,7 +251,7 @@ app.post("/api/ai/analyze-layout", async (req, res) => {
 exports.api = onRequest(
   {
     cors: true,
-    secrets: [GEMINI_API_KEY, NEWSAPI_KEY, FRED_API_KEY, LAYOUT_ADMIN_PIN],
+    secrets: [GEMINI_API_KEY, FRED_API_KEY, LAYOUT_ADMIN_PIN],
     timeoutSeconds: 60,
   },
   app
@@ -334,7 +336,7 @@ async function safeFetchNews(partialReasons) {
   try {
     return await fetchNews();
   } catch (error) {
-    partialReasons.push(`NewsAPI 실패: ${error.message}`);
+    partialReasons.push(`Google News RSS 실패: ${error.message}`);
     return [];
   }
 }
@@ -358,22 +360,25 @@ async function safeFetchFearGreed(partialReasons) {
 }
 
 async function fetchNews() {
-  const key = NEWSAPI_KEY.value();
-  if (!key) {
-    throw new Error("NEWSAPI_KEY 미설정");
-  }
+  const rawXml = await fetchText(GOOGLE_NEWS_RSS_URL);
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: "",
+    trimValues: true,
+  });
+  const parsed = parser.parse(rawXml);
+  const channel = parsed?.rss?.channel;
+  const items = Array.isArray(channel?.item)
+    ? channel.item
+    : channel?.item
+      ? [channel.item]
+      : [];
 
-  const query = new URL("https://newsapi.org/v2/top-headlines");
-  query.searchParams.set("category", "business");
-  query.searchParams.set("language", "en");
-  query.searchParams.set("pageSize", "10");
-  query.searchParams.set("apiKey", key);
-
-  const payload = await fetchJson(query.toString());
-  const articles = Array.isArray(payload.articles) ? payload.articles : [];
-  return articles
-    .map((article) => String(article.title || "").trim())
+  return items
+    .map((item) => String(item?.title || "").trim())
     .filter(Boolean)
+    // Strip trailing source suffix from Google News title.
+    .map((title) => title.replace(/\s*-\s*[^-]+$/, "").trim())
     .slice(0, 10);
 }
 
@@ -567,4 +572,21 @@ async function fetchJson(url, options = {}) {
   }
 
   return response.json();
+}
+
+async function fetchText(url, options = {}) {
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      Accept: "application/rss+xml, application/xml, text/xml;q=0.9, */*;q=0.8",
+    },
+  });
+
+  if (!response.ok) {
+    const body = await response.text().catch(() => "");
+    throw new Error(`HTTP ${response.status} ${body.slice(0, 120)}`.trim());
+  }
+
+  return response.text();
 }
