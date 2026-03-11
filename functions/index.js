@@ -251,6 +251,8 @@ app.post("/api/ai/analyze-layout", async (req, res) => {
 exports.api = onRequest(
   {
     cors: true,
+    invoker: "public",
+    ingressSettings: "ALLOW_ALL",
     secrets: [GEMINI_API_KEY, FRED_API_KEY, LAYOUT_ADMIN_PIN],
     timeoutSeconds: 60,
   },

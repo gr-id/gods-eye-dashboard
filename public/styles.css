@@ -11,6 +11,7 @@
   --greed: #42d68f;
   --neutral: #f0c75e;
   --radius: 14px;
+  --section-content-height: 290px;
 }
 
 *,
@@ -154,6 +155,8 @@ h1 {
 
 .section-card {
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .section-card.dragging {
@@ -221,6 +224,12 @@ h2 {
   gap: 4px;
 }
 
+.section-edit-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
 .layout-mode .span-controls {
   display: inline-flex;
 }
@@ -243,6 +252,14 @@ h2 {
   background: linear-gradient(120deg, var(--accent), var(--accent-2));
 }
 
+.section-delete-btn {
+  padding: 0 8px;
+  height: 20px;
+  border-radius: 6px;
+  font-size: 11px;
+  line-height: 1;
+}
+
 .widget-host {
   width: 100%;
   border-radius: 10px;
@@ -252,11 +269,11 @@ h2 {
 }
 
 .widget-host-main {
-  height: 490px;
+  height: var(--section-content-height);
 }
 
 .widget-host-secondary {
-  height: 290px;
+  height: var(--section-content-height);
 }
 
 .widget-status {
@@ -266,7 +283,8 @@ h2 {
 }
 
 .fng-body {
-  min-height: 240px;
+  min-height: var(--section-content-height);
+  height: var(--section-content-height);
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -308,10 +326,12 @@ h2 {
 }
 
 .ai-card-body {
-  min-height: 200px;
+  min-height: var(--section-content-height);
+  height: var(--section-content-height);
   display: flex;
   flex-direction: column;
   gap: 8px;
+  overflow: auto;
 }
 
 .ai-analysis {
@@ -327,8 +347,8 @@ h2 {
 }
 
 .ticker-host {
-  min-height: 24px;
-  height: 24px;
+  min-height: 46px;
+  height: 46px;
   overflow: hidden;
 }
 
@@ -354,11 +374,10 @@ h2 {
 }
 
 .ticker-floating iframe {
-  transform: scale(0.76);
-  transform-origin: left top;
-  width: 132% !important;
-  height: 30px !important;
-  margin-top: -3px;
+  width: 100% !important;
+  height: 46px !important;
+  margin-top: 0;
+  transform: none;
 }
 
 .ticker-floating .widget-status {
@@ -489,6 +508,10 @@ h2 {
 }
 
 @media (max-width: 640px) {
+  :root {
+    --section-content-height: 260px;
+  }
+
   body {
     padding: 10px 10px 44px;
   }
@@ -502,13 +525,6 @@ h2 {
     align-items: flex-start;
   }
 
-  .widget-host-main {
-    height: 420px;
-  }
-
-  .widget-host-secondary {
-    height: 260px;
-  }
 
   .layout-toolbar {
     flex-direction: column;

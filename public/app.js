@@ -2,6 +2,11 @@
 const FEAR_GREED_FALLBACK_SECONDS = 900;
 const FEAR_GREED_INITIAL_RETRY_SECONDS = 30;
 const WIDGET_LOAD_TIMEOUT_MS = 12000;
+const TICKER_WIDGET_HEIGHT = 46;
+const TICKER_SYMBOL_PATTERN = /^[A-Z0-9._-]+:[A-Z0-9._-]+$/;
+const TICKER_SYMBOL_ALIASES = {
+  "AMEX:IEF": "NASDAQ:IEF",
+};
 
 const API_BASE = "/api";
 
@@ -145,7 +150,6 @@ function bindRefs() {
   refs.grid = document.getElementById("dashboard-grid");
   refs.editToggleBtn = document.getElementById("edit-toggle-btn");
   refs.toolbar = document.getElementById("layout-toolbar");
-  refs.layoutSaveBtn = document.getElementById("layout-save-btn");
   refs.layoutCancelBtn = document.getElementById("layout-cancel-btn");
   refs.layoutAddBtn = document.getElementById("layout-add-btn");
   refs.layoutAiAddBtn = document.getElementById("layout-ai-add-btn");
@@ -168,7 +172,6 @@ function bindRefs() {
 
 function bindGlobalEvents() {
   refs.editToggleBtn.addEventListener("click", onEditModeToggle);
-  refs.layoutSaveBtn.addEventListener("click", onSaveLayout);
   refs.layoutCancelBtn.addEventListener("click", onCancelLayout);
   refs.layoutAddBtn.addEventListener("click", openSymbolModal);
   refs.layoutAiAddBtn.addEventListener("click", openAiModal);
@@ -193,7 +196,10 @@ function getActiveLayout() {
 function render() {
   document.body.classList.toggle("layout-mode", state.layoutMode);
   refs.toolbar.hidden = !state.layoutMode;
-  refs.editToggleBtn.textContent = state.layoutMode ? "편집 중" : "변경";
+  refs.editToggleBtn.textContent = state.layoutMode ? "저장" : "편집";
+  refs.editToggleBtn.classList.toggle("btn-primary", state.layoutMode);
+  refs.editToggleBtn.classList.toggle("btn-outline", !state.layoutMode);
+  refs.layoutCancelBtn.hidden = !state.layoutMode;
 
   const layout = getActiveLayout();
   const sections = sortSections(layout.sections);
@@ -224,7 +230,7 @@ function createSectionCard(section) {
         <h2>${escapeHtml(section.title)}</h2>
         <div class="card-title-right">
           <span class="chip ${isMain ? "chip-primary" : ""}">${escapeHtml(section.badge || "차트")}</span>
-          ${renderSpanControls(section.span)}
+          ${renderSpanControls(section.span, section.id)}
         </div>
       </div>
       <div id="chart-host-${section.id}" class="widget-host ${isMain ? "widget-host-main" : "widget-host-secondary"}"></div>
@@ -240,7 +246,7 @@ function createSectionCard(section) {
         <h2>${escapeHtml(section.title)}</h2>
         <div class="card-title-right">
           <span id="fng-badge" class="chip chip-muted">로딩 중</span>
-          ${renderSpanControls(section.span)}
+          ${renderSpanControls(section.span, section.id)}
         </div>
       </div>
       <div class="fng-body">
@@ -259,7 +265,7 @@ function createSectionCard(section) {
         <h2>${escapeHtml(section.title)}</h2>
         <div class="card-title-right">
           <button class="btn btn-outline ai-analyze-btn" type="button">분석</button>
-          ${renderSpanControls(section.span)}
+          ${renderSpanControls(section.span, section.id)}
         </div>
       </div>
       <div class="ai-card-body">
@@ -272,20 +278,23 @@ function createSectionCard(section) {
   card.innerHTML = `
     <div class="card-title-row">
       <h2>지원되지 않는 섹션</h2>
-      ${renderSpanControls(section.span)}
+      ${renderSpanControls(section.span, section.id)}
     </div>
   `;
   return card;
 }
 
-function renderSpanControls(currentSpan) {
+function renderSpanControls(currentSpan, sectionId) {
   if (!state.layoutMode) return "";
   const value = clampSpan(currentSpan);
   return `
-    <div class="span-controls">
-      <button class="span-btn ${value === 1 ? "active" : ""}" data-span="1" type="button">1</button>
-      <button class="span-btn ${value === 2 ? "active" : ""}" data-span="2" type="button">2</button>
-      <button class="span-btn ${value === 3 ? "active" : ""}" data-span="3" type="button">3</button>
+    <div class="section-edit-controls">
+      <div class="span-controls">
+        <button class="span-btn ${value === 1 ? "active" : ""}" data-span="1" type="button">1</button>
+        <button class="span-btn ${value === 2 ? "active" : ""}" data-span="2" type="button">2</button>
+        <button class="span-btn ${value === 3 ? "active" : ""}" data-span="3" type="button">3</button>
+      </div>
+      <button class="btn btn-outline section-delete-btn" data-delete-id="${escapeHtml(sectionId)}" type="button">삭제</button>
     </div>
   `;
 }
@@ -330,6 +339,14 @@ function bindSectionEvents() {
       });
     });
 
+    const deleteBtn = card.querySelector(".section-delete-btn");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", () => {
+        if (!state.layoutMode) return;
+        deleteDraftSection(sectionId);
+      });
+    }
+
     const analyzeBtn = card.querySelector(".ai-analyze-btn");
     if (analyzeBtn) {
       analyzeBtn.addEventListener("click", runAiAnalysis);
@@ -345,6 +362,27 @@ function setSectionSpan(sectionId, span) {
   const section = state.draftLayout.sections.find((x) => x.id === sectionId);
   if (!section) return;
   section.span = clampSpan(span);
+  render();
+}
+
+function deleteDraftSection(sectionId) {
+  const ordered = sortSections(state.draftLayout.sections);
+  if (ordered.length <= 1) {
+    window.alert("최소 1개 섹션은 유지해야 합니다.");
+    return;
+  }
+
+  const target = ordered.find((section) => section.id === sectionId);
+  if (!target) return;
+
+  const ok = window.confirm(`"${target.title}" 섹션을 삭제할까요?`);
+  if (!ok) return;
+
+  const next = ordered.filter((section) => section.id !== sectionId);
+  next.forEach((section, index) => {
+    section.order = index;
+  });
+  state.draftLayout.sections = next;
   render();
 }
 
@@ -367,7 +405,10 @@ function reorderDraftSections(fromId, toId) {
 }
 
 async function onEditModeToggle() {
-  if (state.layoutMode) return;
+  if (state.layoutMode) {
+    await onSaveLayout();
+    return;
+  }
 
   const pin = await ensureAdminPin();
   if (!pin) return;
@@ -677,15 +718,25 @@ function createTradingViewWidget(section) {
 }
 
 function refreshTicker(chartSections) {
-  if (!refs.tickerWidget) return;
+  if (!refs.tickerWidget || !refs.tickerStatus) return;
 
   const tickerSymbols = chartSections
-    .filter((section) => section.symbol)
-    .slice(0, 16)
-    .map((section) => ({ proName: section.symbol, title: section.title }));
+    .map((section) => ({
+      proName: String(TICKER_SYMBOL_ALIASES[String(section.symbol || "").toUpperCase()] || section.symbol || "").toUpperCase(),
+      title: String(section.title || section.symbol || ""),
+    }))
+    .filter((item) => TICKER_SYMBOL_PATTERN.test(item.proName))
+    .slice(0, 16);
 
   refs.tickerWidget.innerHTML = "";
   refs.tickerStatus.hidden = true;
+  refs.tickerStatus.textContent = "티커 위젯 로딩이 지연되고 있습니다.";
+
+  if (!tickerSymbols.length) {
+    refs.tickerStatus.hidden = false;
+    refs.tickerStatus.textContent = "표시 가능한 티커 심볼이 없습니다.";
+    return;
+  }
 
   const script = document.createElement("script");
   script.src = "https://s3.tradingview.com/external-embedding/embed-widget-ticker-tape.js";
@@ -696,7 +747,9 @@ function refreshTicker(chartSections) {
     showSymbolLogo: false,
     colorTheme: "dark",
     isTransparent: true,
-    displayMode: "compact",
+    displayMode: "adaptive",
+    width: "100%",
+    height: TICKER_WIDGET_HEIGHT,
     locale: "kr",
   });
 
@@ -704,7 +757,7 @@ function refreshTicker(chartSections) {
 
   window.setTimeout(() => {
     const hasIframe = refs.tickerWidget.querySelector("iframe");
-    if (!hasIframe) refs.tickerStatus.hidden = false;
+    refs.tickerStatus.hidden = Boolean(hasIframe);
   }, WIDGET_LOAD_TIMEOUT_MS);
 }
 
