@@ -11,6 +11,7 @@ const db = getFirestore();
 const LAYOUT_DOC = db.collection("layouts").doc("global");
 const GOOGLE_NEWS_RSS_URL =
   "https://news.google.com/rss/search?q=stock+market+OR+federal+reserve+OR+inflation+OR+bitcoin&hl=en-US&gl=US&ceid=US:en";
+const GEMINI_MODEL_CANDIDATES = ["gemini-2.5-pro", "gemini-2.5-flash"];
 
 const GEMINI_API_KEY = defineSecret("GEMINI_API_KEY");
 const FRED_API_KEY = defineSecret("FRED_API_KEY");
@@ -186,13 +187,17 @@ app.post("/api/ai/suggest-symbols", async (req, res) => {
     let recommendations = [];
     const geminiKey = GEMINI_API_KEY.value();
     if (geminiKey) {
-      recommendations = await suggestWithGemini({
-        geminiKey,
-        existingSymbols,
-        news,
-        fred,
-        fearGreed,
-      });
+      try {
+        recommendations = await suggestWithGemini({
+          geminiKey,
+          existingSymbols,
+          news,
+          fred,
+          fearGreed,
+        });
+      } catch (error) {
+        partialReasons.push(`Gemini 호출 실패: ${String(error.message || error)}`);
+      }
     }
 
     if (!recommendations.length) {
@@ -229,7 +234,11 @@ app.post("/api/ai/analyze-layout", async (req, res) => {
     let analysis = "";
     const geminiKey = GEMINI_API_KEY.value();
     if (geminiKey) {
-      analysis = await analyzeWithGemini({ geminiKey, symbols, news, fred, fearGreed });
+      try {
+        analysis = await analyzeWithGemini({ geminiKey, symbols, news, fred, fearGreed });
+      } catch (error) {
+        partialReasons.push(`Gemini 호출 실패: ${String(error.message || error)}`);
+      }
     }
 
     if (!analysis) {
@@ -521,7 +530,6 @@ async function callGeminiJson(apiKey, prompt) {
 }
 
 async function callGeminiText(apiKey, prompt, responseMimeType) {
-  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
   const body = {
     contents: [{ role: "user", parts: [{ text: prompt }] }],
     generationConfig: {
@@ -533,13 +541,26 @@ async function callGeminiText(apiKey, prompt, responseMimeType) {
     body.generationConfig.responseMimeType = responseMimeType;
   }
 
-  const payload = await fetchJson(endpoint, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+  let lastError = null;
+  for (const modelId of GEMINI_MODEL_CANDIDATES) {
+    const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelId}:generateContent?key=${apiKey}`;
+    try {
+      const payload = await fetchJson(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      return payload?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+    } catch (error) {
+      lastError = error;
+      logger.warn("Gemini model attempt failed", {
+        modelId,
+        message: String(error.message || error),
+      });
+    }
+  }
 
-  return payload?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+  throw new Error(`Gemini 모델 호출 실패: ${String(lastError?.message || "unknown")}`);
 }
 
 function extractJsonObject(rawText) {
