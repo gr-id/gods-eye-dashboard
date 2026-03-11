@@ -9,88 +9,102 @@ const TICKER_SYMBOL_ALIASES = {
 };
 
 const API_BASE = "/api";
+const ALLOWED_CHART_INTERVALS = new Set(["W", "D", "60"]);
+const ALLOWED_SECTION_TYPES = new Set(["chart", "fng", "ai", "metric"]);
 
-const DEFAULT_LAYOUT = {
-  version: 1,
+const DEFAULT_LAYOUT_SECTIONS = [
+  {
+    id: "btc-main",
+    type: "chart",
+    title: "BTC/USD 메인 차트",
+    symbol: "BINANCE:BTCUSDT",
+    badge: "주요 지표",
+    span: 2,
+    order: 0,
+    widgetOptions: { interval: "30", main: true },
+  },
+  {
+    id: "fng-core",
+    type: "fng",
+    title: "Fear & Greed",
+    span: 1,
+    order: 1,
+    widgetOptions: {},
+  },
+  {
+    id: "vix",
+    type: "chart",
+    title: "VIX",
+    symbol: "AMEX:VXX",
+    badge: "변동성",
+    span: 1,
+    order: 2,
+    widgetOptions: { interval: "60" },
+  },
+  {
+    id: "dxy",
+    type: "chart",
+    title: "DXY",
+    symbol: "AMEX:UUP",
+    badge: "달러 인덱스",
+    span: 1,
+    order: 3,
+    widgetOptions: { interval: "60" },
+  },
+  {
+    id: "us10y",
+    type: "chart",
+    title: "US10Y",
+    symbol: "AMEX:IEF",
+    badge: "거시 금리",
+    span: 1,
+    order: 4,
+    widgetOptions: { interval: "60" },
+  },
+  {
+    id: "ndx",
+    type: "chart",
+    title: "Nasdaq 100",
+    symbol: "NASDAQ:QQQ",
+    badge: "Equity",
+    span: 1,
+    order: 5,
+    widgetOptions: { interval: "60" },
+  },
+  {
+    id: "spx",
+    type: "chart",
+    title: "S&P 500",
+    symbol: "AMEX:SPY",
+    badge: "Equity",
+    span: 1,
+    order: 6,
+    widgetOptions: { interval: "60" },
+  },
+  {
+    id: "ai-overview",
+    type: "ai",
+    title: "AI 시황 분석",
+    span: 3,
+    order: 7,
+    widgetOptions: {},
+  },
+];
+
+const DEFAULT_LAYOUT_STORE = {
+  version: 2,
   updatedAt: null,
   updatedBy: "system",
   meta: {},
-  sections: [
+  activeLayoutId: "layout-main",
+  layouts: [
     {
-      id: "btc-main",
-      type: "chart",
-      title: "BTC/USD 메인 차트",
-      symbol: "BINANCE:BTCUSDT",
-      badge: "주요 지표",
-      span: 2,
-      order: 0,
-      widgetOptions: { interval: "30", main: true },
-    },
-    {
-      id: "fng-core",
-      type: "fng",
-      title: "Fear & Greed",
-      span: 1,
-      order: 1,
-      widgetOptions: {},
-    },
-    {
-      id: "vix",
-      type: "chart",
-      title: "VIX",
-      symbol: "AMEX:VXX",
-      badge: "변동성",
-      span: 1,
-      order: 2,
-      widgetOptions: { interval: "60" },
-    },
-    {
-      id: "dxy",
-      type: "chart",
-      title: "DXY",
-      symbol: "AMEX:UUP",
-      badge: "달러 인덱스",
-      span: 1,
-      order: 3,
-      widgetOptions: { interval: "60" },
-    },
-    {
-      id: "us10y",
-      type: "chart",
-      title: "US10Y",
-      symbol: "AMEX:IEF",
-      badge: "거시 금리",
-      span: 1,
-      order: 4,
-      widgetOptions: { interval: "60" },
-    },
-    {
-      id: "ndx",
-      type: "chart",
-      title: "Nasdaq 100",
-      symbol: "NASDAQ:QQQ",
-      badge: "Equity",
-      span: 1,
-      order: 5,
-      widgetOptions: { interval: "60" },
-    },
-    {
-      id: "spx",
-      type: "chart",
-      title: "S&P 500",
-      symbol: "AMEX:SPY",
-      badge: "Equity",
-      span: 1,
-      order: 6,
-      widgetOptions: { interval: "60" },
-    },
-    {
-      id: "ai-overview",
-      type: "ai",
-      title: "AI 시황 분석",
-      span: 3,
-      order: 7,
-      widgetOptions: {},
+      id: "layout-main",
+      name: "기본 레이아웃",
+      settings: {
+        chartInterval: "60",
+      },
+      sections: DEFAULT_LAYOUT_SECTIONS,
     },
   ],
 };
@@ -105,8 +119,8 @@ const FNG_CLASSIFICATION_MAP = {
 
 const state = {
   layoutMode: false,
-  savedLayout: null,
-  draftLayout: null,
+  savedLayoutStore: null,
+  draftLayoutStore: null,
   pinVerifiedSession: sessionStorage.getItem("layoutPinVerified") === "1",
   adminPin: null,
   dragSourceId: null,
@@ -126,9 +140,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   bindRefs();
   bindGlobalEvents();
 
-  const layout = await loadLayoutFromServer();
-  state.savedLayout = layout;
-  state.draftLayout = cloneLayout(layout);
+  const layoutStore = await loadLayoutFromServer();
+  state.savedLayoutStore = layoutStore;
+  state.draftLayoutStore = cloneLayout(layoutStore);
 
   render();
   initFearAndGreedCard();
@@ -151,10 +165,24 @@ function bindRefs() {
   refs.editToggleBtn = document.getElementById("edit-toggle-btn");
   refs.toolbar = document.getElementById("layout-toolbar");
   refs.layoutCancelBtn = document.getElementById("layout-cancel-btn");
+
+  refs.layoutSelect = document.getElementById("layout-select");
+  refs.layoutCreateBtn = document.getElementById("layout-create-btn");
+  refs.layoutDuplicateBtn = document.getElementById("layout-duplicate-btn");
+  refs.layoutRenameBtn = document.getElementById("layout-rename-btn");
+
   refs.layoutAddBtn = document.getElementById("layout-add-btn");
   refs.layoutAiAddBtn = document.getElementById("layout-ai-add-btn");
+  refs.layoutDeleteBtn = document.getElementById("layout-delete-btn");
+  refs.timeframeBtns = Array.from(document.querySelectorAll(".timeframe-btn"));
+
   refs.tickerWidget = document.getElementById("ticker-widget");
   refs.tickerStatus = document.getElementById("ticker-status");
+
+  refs.sectionModal = document.getElementById("section-modal");
+  refs.sectionModalChartBtn = document.getElementById("section-modal-chart-btn");
+  refs.sectionModalMetricBtn = document.getElementById("section-modal-metric-btn");
+  refs.sectionModalCancel = document.getElementById("section-modal-cancel");
 
   refs.symbolModal = document.getElementById("symbol-modal");
   refs.symbolInput = document.getElementById("symbol-input");
@@ -173,11 +201,30 @@ function bindRefs() {
 function bindGlobalEvents() {
   refs.editToggleBtn.addEventListener("click", onEditModeToggle);
   refs.layoutCancelBtn.addEventListener("click", onCancelLayout);
-  refs.layoutAddBtn.addEventListener("click", openSymbolModal);
+
+  refs.layoutSelect.addEventListener("change", onLayoutSelectionChange);
+  refs.layoutCreateBtn.addEventListener("click", onCreateLayout);
+  refs.layoutDuplicateBtn.addEventListener("click", onDuplicateLayout);
+  refs.layoutRenameBtn.addEventListener("click", onRenameLayout);
+
+  refs.layoutAddBtn.addEventListener("click", openSectionModal);
   refs.layoutAiAddBtn.addEventListener("click", openAiModal);
+  refs.layoutDeleteBtn.addEventListener("click", onDeleteActiveLayout);
+
+  refs.sectionModalChartBtn.addEventListener("click", onSelectChartSectionType);
+  refs.sectionModalMetricBtn.addEventListener("click", onSelectMetricSectionType);
+  refs.sectionModalCancel.addEventListener("click", () => closeModal("section"));
+
+  refs.timeframeBtns.forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!state.layoutMode) return;
+      setActiveLayoutInterval(button.dataset.interval);
+    });
+  });
 
   refs.symbolModalSubmit.addEventListener("click", onSubmitManualSymbol);
   refs.symbolModalCancel.addEventListener("click", () => closeModal("symbol"));
+
   refs.aiModalApply.addEventListener("click", applyAiSelections);
   refs.aiModalCancel.addEventListener("click", () => closeModal("ai"));
 
@@ -189,11 +236,29 @@ function bindGlobalEvents() {
   });
 }
 
-function getActiveLayout() {
-  return state.layoutMode ? state.draftLayout : state.savedLayout;
+function getActiveLayoutStore() {
+  return state.layoutMode ? state.draftLayoutStore : state.savedLayoutStore;
+}
+
+function getLayoutById(layoutStore, layoutId) {
+  if (!layoutStore || !Array.isArray(layoutStore.layouts)) return null;
+  return layoutStore.layouts.find((layout) => layout.id === layoutId) || null;
+}
+
+function getActiveLayout(layoutStore = getActiveLayoutStore()) {
+  if (!layoutStore || !Array.isArray(layoutStore.layouts) || !layoutStore.layouts.length) return null;
+  return getLayoutById(layoutStore, layoutStore.activeLayoutId) || layoutStore.layouts[0];
+}
+
+function getEditableActiveLayout() {
+  if (!state.layoutMode || !state.draftLayoutStore) return null;
+  return getActiveLayout(state.draftLayoutStore);
 }
 
 function render() {
+  const layoutStore = getActiveLayoutStore();
+  const activeLayout = getActiveLayout(layoutStore);
+
   document.body.classList.toggle("layout-mode", state.layoutMode);
   refs.toolbar.hidden = !state.layoutMode;
   refs.editToggleBtn.textContent = state.layoutMode ? "저장" : "편집";
@@ -201,26 +266,65 @@ function render() {
   refs.editToggleBtn.classList.toggle("btn-outline", !state.layoutMode);
   refs.layoutCancelBtn.hidden = !state.layoutMode;
 
-  const layout = getActiveLayout();
-  const sections = sortSections(layout.sections);
+  renderLayoutSelect(layoutStore);
+  updateLayoutActionState(layoutStore);
+  updateTimeframeButtons(activeLayout);
 
   refs.grid.innerHTML = "";
+  if (!activeLayout) return;
+
+  const sections = sortSections(activeLayout.sections);
   for (const section of sections) {
     refs.grid.appendChild(createSectionCard(section));
   }
 
   bindSectionEvents();
-  initChartWidgets(sections.filter((x) => x.type === "chart"));
-  refreshTicker(sections.filter((x) => x.type === "chart"));
+  initChartWidgets(sections.filter((section) => section.type === "chart"));
+  refreshTicker(sections.filter((section) => section.type === "chart"));
   renderAiSectionText();
   if (state.lastFearGreedData) renderFearAndGreed(state.lastFearGreedData, false);
 }
 
+function renderLayoutSelect(layoutStore) {
+  if (!layoutStore || !Array.isArray(layoutStore.layouts)) return;
+
+  refs.layoutSelect.innerHTML = "";
+  for (const layout of layoutStore.layouts) {
+    const option = document.createElement("option");
+    option.value = layout.id;
+    option.textContent = layout.name;
+    refs.layoutSelect.appendChild(option);
+  }
+
+  refs.layoutSelect.value = layoutStore.activeLayoutId;
+}
+
+function updateLayoutActionState(layoutStore) {
+  const canEditLayouts = state.layoutMode;
+  refs.layoutCreateBtn.disabled = !canEditLayouts;
+  refs.layoutDuplicateBtn.disabled = !canEditLayouts;
+  refs.layoutRenameBtn.disabled = !canEditLayouts;
+
+  refs.layoutDeleteBtn.hidden = !state.layoutMode;
+  refs.layoutDeleteBtn.disabled = !state.layoutMode || (layoutStore?.layouts?.length || 0) <= 1;
+}
+
+function updateTimeframeButtons(activeLayout) {
+  const interval = normalizeChartInterval(activeLayout?.settings?.chartInterval);
+  refs.timeframeBtns.forEach((button) => {
+    const isActive = button.dataset.interval === interval;
+    button.classList.toggle("active", isActive);
+    button.disabled = !state.layoutMode;
+  });
+}
 function createSectionCard(section) {
   const card = document.createElement("section");
   card.className = `card section-card span-${clampSpan(section.span)}`;
   card.dataset.sectionId = section.id;
   card.dataset.sectionType = section.type;
+  if (section.type === "metric") {
+    card.dataset.metricKey = section.metricKey || "";
+  }
   card.draggable = state.layoutMode;
 
   if (section.type === "chart") {
@@ -245,15 +349,35 @@ function createSectionCard(section) {
       <div class="card-title-row">
         <h2>${escapeHtml(section.title)}</h2>
         <div class="card-title-right">
-          <span id="fng-badge" class="chip chip-muted">로딩 중</span>
+          <span class="chip chip-muted fng-badge">로딩 중</span>
           ${renderSpanControls(section.span, section.id)}
         </div>
       </div>
       <div class="fng-body">
-        <p id="fng-value" class="fng-value">N/A</p>
-        <p id="fng-classification" class="fng-classification">데이터 수집 대기</p>
-        <p id="fng-updated" class="fng-updated">업데이트: -</p>
-        <p id="fng-status" class="fng-status">상태: 초기화 중</p>
+        <p class="fng-value">N/A</p>
+        <p class="fng-classification">데이터 수집 대기</p>
+        <p class="fng-updated">업데이트: -</p>
+        <p class="fng-status">상태: 초기화 중</p>
+      </div>
+    `;
+    return card;
+  }
+
+  if (section.type === "metric") {
+    const metricLabel = resolveMetricLabel(section.metricKey);
+    card.classList.add("metric-card", "metric-compact");
+    card.innerHTML = `
+      <div class="card-title-row">
+        <h2>${escapeHtml(section.title || metricLabel)}</h2>
+        <div class="card-title-right">
+          <span class="chip chip-muted metric-badge">로딩 중</span>
+          ${renderSpanControls(section.span, section.id)}
+        </div>
+      </div>
+      <div class="metric-body">
+        <p class="metric-value">N/A</p>
+        <p class="metric-classification">${escapeHtml(metricLabel)}</p>
+        <p class="metric-updated">업데이트: -</p>
       </div>
     `;
     return card;
@@ -269,7 +393,7 @@ function createSectionCard(section) {
         </div>
       </div>
       <div class="ai-card-body">
-        <p id="ai-analysis-text" class="ai-analysis">${escapeHtml(state.aiAnalysis)}</p>
+        <p class="ai-analysis ai-analysis-text">${escapeHtml(state.aiAnalysis)}</p>
       </div>
     `;
     return card;
@@ -359,14 +483,21 @@ function clearDropTargets() {
 }
 
 function setSectionSpan(sectionId, span) {
-  const section = state.draftLayout.sections.find((x) => x.id === sectionId);
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) return;
+
+  const section = activeLayout.sections.find((candidate) => candidate.id === sectionId);
   if (!section) return;
+
   section.span = clampSpan(span);
   render();
 }
 
 function deleteDraftSection(sectionId) {
-  const ordered = sortSections(state.draftLayout.sections);
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) return;
+
+  const ordered = sortSections(activeLayout.sections);
   if (ordered.length <= 1) {
     window.alert("최소 1개 섹션은 유지해야 합니다.");
     return;
@@ -378,20 +509,22 @@ function deleteDraftSection(sectionId) {
   const ok = window.confirm(`"${target.title}" 섹션을 삭제할까요?`);
   if (!ok) return;
 
-  const next = ordered.filter((section) => section.id !== sectionId);
-  next.forEach((section, index) => {
+  const nextSections = ordered.filter((section) => section.id !== sectionId);
+  nextSections.forEach((section, index) => {
     section.order = index;
   });
-  state.draftLayout.sections = next;
+
+  activeLayout.sections = nextSections;
   render();
 }
 
 function reorderDraftSections(fromId, toId) {
-  if (!fromId || !toId || fromId === toId) return;
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout || !fromId || !toId || fromId === toId) return;
 
-  const ordered = sortSections(state.draftLayout.sections);
-  const fromIndex = ordered.findIndex((x) => x.id === fromId);
-  const toIndex = ordered.findIndex((x) => x.id === toId);
+  const ordered = sortSections(activeLayout.sections);
+  const fromIndex = ordered.findIndex((section) => section.id === fromId);
+  const toIndex = ordered.findIndex((section) => section.id === toId);
   if (fromIndex < 0 || toIndex < 0) return;
 
   const [moved] = ordered.splice(fromIndex, 1);
@@ -400,7 +533,8 @@ function reorderDraftSections(fromId, toId) {
   ordered.forEach((section, index) => {
     section.order = index;
   });
-  state.draftLayout.sections = ordered;
+
+  activeLayout.sections = ordered;
   render();
 }
 
@@ -414,7 +548,7 @@ async function onEditModeToggle() {
   if (!pin) return;
 
   state.layoutMode = true;
-  state.draftLayout = cloneLayout(state.savedLayout);
+  state.draftLayoutStore = cloneLayout(state.savedLayoutStore);
   render();
 }
 
@@ -451,12 +585,13 @@ async function onSaveLayout() {
   try {
     const payload = {
       pin,
-      layout: normalizeLayout(state.draftLayout),
+      layout: normalizeLayoutStore(state.draftLayoutStore),
       updatedBy: "web-admin",
     };
     const result = await apiRequest("/layout/save", { method: "POST", body: payload });
-    state.savedLayout = normalizeLayout(result.layout || state.draftLayout);
-    state.draftLayout = cloneLayout(state.savedLayout);
+
+    state.savedLayoutStore = normalizeLayoutStore(result.layout || state.draftLayoutStore);
+    state.draftLayoutStore = cloneLayout(state.savedLayoutStore);
     state.layoutMode = false;
     render();
     window.alert("레이아웃이 저장되었습니다.");
@@ -468,13 +603,167 @@ async function onSaveLayout() {
 function onCancelLayout() {
   if (!state.layoutMode) return;
   state.layoutMode = false;
-  state.draftLayout = cloneLayout(state.savedLayout);
+  state.draftLayoutStore = cloneLayout(state.savedLayoutStore);
+  render();
+}
+function onLayoutSelectionChange() {
+  const selectedLayoutId = String(refs.layoutSelect.value || "");
+  if (!selectedLayoutId) return;
+
+  if (state.layoutMode) {
+    if (!getLayoutById(state.draftLayoutStore, selectedLayoutId)) return;
+    state.draftLayoutStore.activeLayoutId = selectedLayoutId;
+  } else {
+    if (!getLayoutById(state.savedLayoutStore, selectedLayoutId)) return;
+    state.savedLayoutStore.activeLayoutId = selectedLayoutId;
+  }
+
+  render();
+}
+
+function onCreateLayout() {
+  if (!state.layoutMode) {
+    window.alert("레이아웃 편집 모드에서만 추가할 수 있습니다.");
+    return;
+  }
+
+  const store = state.draftLayoutStore;
+  const newLayout = normalizeSingleLayout(
+    {
+      id: makeId("layout"),
+      name: `레이아웃 ${store.layouts.length + 1}`,
+      settings: { chartInterval: "60" },
+      sections: duplicateSectionsWithNewIds(DEFAULT_LAYOUT_STORE.layouts[0].sections),
+    },
+    store.layouts.length
+  );
+
+  store.layouts.push(newLayout);
+  store.activeLayoutId = newLayout.id;
+  render();
+}
+
+function onDuplicateLayout() {
+  if (!state.layoutMode) {
+    window.alert("레이아웃 편집 모드에서만 복제할 수 있습니다.");
+    return;
+  }
+
+  const store = state.draftLayoutStore;
+  const activeLayout = getActiveLayout(store);
+  if (!activeLayout) return;
+
+  const duplicated = normalizeSingleLayout(
+    {
+      id: makeId("layout"),
+      name: `${activeLayout.name} 복제`,
+      settings: cloneLayout(activeLayout.settings || {}),
+      sections: duplicateSectionsWithNewIds(activeLayout.sections),
+    },
+    store.layouts.length
+  );
+
+  store.layouts.push(duplicated);
+  store.activeLayoutId = duplicated.id;
+  render();
+}
+
+function onRenameLayout() {
+  if (!state.layoutMode) {
+    window.alert("레이아웃 편집 모드에서만 이름을 변경할 수 있습니다.");
+    return;
+  }
+
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) return;
+
+  const nextName = String(window.prompt("레이아웃 이름", activeLayout.name) || "").trim();
+  if (!nextName) return;
+
+  activeLayout.name = nextName;
+  render();
+}
+
+function onDeleteActiveLayout() {
+  if (!state.layoutMode) return;
+
+  const store = state.draftLayoutStore;
+  if (!store || !Array.isArray(store.layouts)) return;
+
+  if (store.layouts.length <= 1) {
+    window.alert("최소 1개의 레이아웃은 유지해야 합니다.");
+    return;
+  }
+
+  const activeLayout = getActiveLayout(store);
+  if (!activeLayout) return;
+
+  const ok = window.confirm(`현재 레이아웃 "${activeLayout.name}"을(를) 삭제할까요?`);
+  if (!ok) return;
+
+  const currentIndex = store.layouts.findIndex((layout) => layout.id === activeLayout.id);
+  const nextLayouts = store.layouts.filter((layout) => layout.id !== activeLayout.id);
+
+  const nextIndex = Math.min(Math.max(currentIndex - 1, 0), nextLayouts.length - 1);
+  store.layouts = nextLayouts;
+  store.activeLayoutId = nextLayouts[nextIndex].id;
+
+  render();
+}
+
+function setActiveLayoutInterval(interval) {
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) return;
+
+  activeLayout.settings = activeLayout.settings || {};
+  activeLayout.settings.chartInterval = normalizeChartInterval(interval);
+  render();
+}
+
+function openSectionModal() {
+  if (!state.layoutMode) {
+    window.alert("레이아웃 편집 모드에서만 섹션을 추가할 수 있습니다.");
+    return;
+  }
+  refs.sectionModal.hidden = false;
+}
+
+function onSelectChartSectionType() {
+  closeModal("section");
+  openSymbolModal();
+}
+
+function onSelectMetricSectionType() {
+  closeModal("section");
+  addFearGreedMetricSection();
+}
+
+function addFearGreedMetricSection() {
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) return;
+
+  activeLayout.sections.push({
+    id: makeId("metric"),
+    type: "metric",
+    metricKey: "fearGreed",
+    title: "Fear & Greed Mini",
+    span: 1,
+    order: activeLayout.sections.length,
+    widgetOptions: { compact: true },
+  });
+
   render();
 }
 
 function openSymbolModal() {
+  if (!state.layoutMode) {
+    window.alert("레이아웃 편집 모드에서만 차트를 추가할 수 있습니다.");
+    return;
+  }
+
   refs.symbolModal.hidden = false;
   refs.symbolModalError.hidden = true;
+  refs.symbolModalError.textContent = "";
   refs.symbolInput.value = "";
   refs.titleInput.value = "";
   refs.symbolInput.focus();
@@ -483,9 +772,13 @@ function openSymbolModal() {
 function closeModal(name) {
   if (name === "symbol") refs.symbolModal.hidden = true;
   if (name === "ai") refs.aiModal.hidden = true;
+  if (name === "section") refs.sectionModal.hidden = true;
 }
 
 function onSubmitManualSymbol() {
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) return;
+
   const symbol = String(refs.symbolInput.value || "").trim().toUpperCase();
   const title = String(refs.titleInput.value || "").trim();
 
@@ -501,21 +794,23 @@ function onSubmitManualSymbol() {
     return;
   }
 
-  const duplicate = state.draftLayout.sections.some((section) => section.type === "chart" && section.symbol === symbol);
+  const duplicate = activeLayout.sections.some(
+    (section) => section.type === "chart" && String(section.symbol || "").toUpperCase() === symbol
+  );
   if (duplicate) {
     refs.symbolModalError.hidden = false;
     refs.symbolModalError.textContent = "이미 추가된 심볼입니다.";
     return;
   }
 
-  state.draftLayout.sections.push({
+  activeLayout.sections.push({
     id: makeId("chart"),
     type: "chart",
     title,
     symbol,
     badge: "Custom",
     span: 1,
-    order: state.draftLayout.sections.length,
+    order: activeLayout.sections.length,
     widgetOptions: { interval: "60" },
   });
 
@@ -524,6 +819,9 @@ function onSubmitManualSymbol() {
 }
 
 async function openAiModal() {
+  const activeLayout = getEditableActiveLayout() || getActiveLayout();
+  if (!activeLayout) return;
+
   refs.aiModal.hidden = false;
   refs.aiModalStatus.textContent = "추천 목록을 준비하는 중입니다.";
   refs.aiSuggestList.innerHTML = "";
@@ -531,7 +829,7 @@ async function openAiModal() {
   try {
     const response = await apiRequest("/ai/suggest-symbols", {
       method: "POST",
-      body: { sections: state.draftLayout.sections },
+      body: { sections: activeLayout.sections },
     });
 
     state.aiSuggestions = Array.isArray(response.recommendations) ? response.recommendations : [];
@@ -564,6 +862,12 @@ async function openAiModal() {
 }
 
 function applyAiSelections() {
+  const activeLayout = getEditableActiveLayout();
+  if (!activeLayout) {
+    closeModal("ai");
+    return;
+  }
+
   const checks = refs.aiSuggestList.querySelectorAll(".ai-suggest-check:checked");
   if (!checks.length) {
     closeModal("ai");
@@ -571,7 +875,7 @@ function applyAiSelections() {
   }
 
   const existingSymbols = new Set(
-    state.draftLayout.sections
+    activeLayout.sections
       .filter((section) => section.type === "chart")
       .map((section) => String(section.symbol || "").toUpperCase())
   );
@@ -585,14 +889,14 @@ function applyAiSelections() {
     if (existingSymbols.has(symbol)) return;
 
     existingSymbols.add(symbol);
-    state.draftLayout.sections.push({
+    activeLayout.sections.push({
       id: makeId("chart"),
       type: "chart",
       title: item.title || symbol,
       symbol,
       badge: "AI 추천",
       span: 1,
-      order: state.draftLayout.sections.length,
+      order: activeLayout.sections.length,
       widgetOptions: { interval: "60" },
     });
   });
@@ -602,10 +906,10 @@ function applyAiSelections() {
 }
 
 function renderAiSectionText() {
-  const textNode = document.getElementById("ai-analysis-text");
-  if (!textNode) return;
-  textNode.textContent = state.aiAnalysis;
-  textNode.classList.toggle("partial", Boolean(state.aiAnalysisPartial));
+  refs.grid.querySelectorAll(".ai-analysis-text").forEach((node) => {
+    node.textContent = state.aiAnalysis;
+    node.classList.toggle("partial", Boolean(state.aiAnalysisPartial));
+  });
 }
 
 async function runAiAnalysis() {
@@ -618,7 +922,7 @@ async function runAiAnalysis() {
   try {
     const response = await apiRequest("/ai/analyze-layout", {
       method: "POST",
-      body: { sections: getActiveLayout().sections },
+      body: { sections: getActiveLayout()?.sections || [] },
     });
 
     state.aiAnalysis = response.analysis || "분석 결과가 없습니다.";
@@ -639,10 +943,10 @@ async function runAiAnalysis() {
 async function loadLayoutFromServer() {
   try {
     const response = await apiRequest("/layout", { method: "GET" });
-    const layout = response.layout ? response.layout : DEFAULT_LAYOUT;
-    return normalizeLayout(layout);
+    const layout = response.layout ? response.layout : DEFAULT_LAYOUT_STORE;
+    return normalizeLayoutStore(layout);
   } catch {
-    return normalizeLayout(DEFAULT_LAYOUT);
+    return normalizeLayoutStore(DEFAULT_LAYOUT_STORE);
   }
 }
 
@@ -669,6 +973,7 @@ async function initChartWidgets(chartSections) {
 
 function createTradingViewWidget(section) {
   if (!window.TradingView) return;
+
   const hostId = `chart-host-${section.id}`;
   const host = document.getElementById(hostId);
   const status = document.getElementById(`status-${section.id}`);
@@ -676,10 +981,11 @@ function createTradingViewWidget(section) {
 
   host.innerHTML = "";
 
+  const activeInterval = normalizeChartInterval(getActiveLayout()?.settings?.chartInterval);
   const options = {
     autosize: true,
     symbol: section.symbol,
-    interval: section.widgetOptions?.interval || "60",
+    interval: activeInterval,
     timezone: "Etc/UTC",
     theme: "dark",
     style: "1",
@@ -777,7 +1083,6 @@ function loadTradingViewScript() {
 
   return state.tradingViewScriptPromise;
 }
-
 function initFearAndGreedCard() {
   fetchFearAndGreed();
 }
@@ -790,6 +1095,7 @@ async function fetchFearAndGreed() {
   try {
     const response = await fetch(FEAR_GREED_API_URL, { cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
     const payload = await response.json();
     const item = payload?.data?.[0];
     if (!item) throw new Error("Missing fear and greed payload");
@@ -805,7 +1111,7 @@ async function fetchFearAndGreed() {
       renderFearAndGreed(state.lastFearGreedData, true);
       scheduleFearGreedFetch(FEAR_GREED_FALLBACK_SECONDS);
     } else {
-      renderFearAndGreedUnavailable();
+      renderFearGreedUnavailable();
       scheduleFearGreedFetch(FEAR_GREED_INITIAL_RETRY_SECONDS);
     }
   } finally {
@@ -829,69 +1135,154 @@ function clearFearGreedTimer() {
   state.fearGreedTimerId = null;
 }
 
-function renderFearAndGreed(item, isStale) {
-  const card = refs.grid.querySelector('[data-section-type="fng"]');
-  if (!card) return;
+function getFearGreedCards() {
+  return refs.grid.querySelectorAll(
+    '[data-section-type="fng"], [data-section-type="metric"][data-metric-key="fearGreed"]'
+  );
+}
 
-  const valueEl = card.querySelector("#fng-value");
-  const classEl = card.querySelector("#fng-classification");
-  const updatedEl = card.querySelector("#fng-updated");
-  const statusEl = card.querySelector("#fng-status");
-  const badgeEl = card.querySelector("#fng-badge");
-  if (!valueEl || !classEl || !updatedEl || !statusEl || !badgeEl) return;
+function renderFearAndGreed(item, isStale) {
+  const cards = getFearGreedCards();
+  if (!cards.length) return;
 
   const numericValue = Number(item.value);
   const rawClass = String(item.value_classification || "Neutral");
   const translatedClass = FNG_CLASSIFICATION_MAP[rawClass] || rawClass;
   const updatedTime = formatTimestamp(item.timestamp);
+  const tone = resolveFearGreedTone(rawClass, numericValue);
 
-  valueEl.textContent = Number.isFinite(numericValue) ? String(numericValue) : "N/A";
-  classEl.textContent = translatedClass;
-  updatedEl.textContent = `업데이트: ${updatedTime}`;
+  cards.forEach((card) => {
+    const sectionType = card.dataset.sectionType;
+    if (sectionType === "fng") {
+      renderFearGreedFullCard(card, {
+        numericValue,
+        translatedClass,
+        updatedTime,
+        tone,
+        isStale,
+      });
+      return;
+    }
+
+    if (sectionType === "metric" && card.dataset.metricKey === "fearGreed") {
+      renderFearGreedMetricCard(card, {
+        numericValue,
+        translatedClass,
+        updatedTime,
+        tone,
+        isStale,
+      });
+    }
+  });
+}
+
+function renderFearGreedFullCard(card, data) {
+  const valueEl = card.querySelector(".fng-value");
+  const classEl = card.querySelector(".fng-classification");
+  const updatedEl = card.querySelector(".fng-updated");
+  const statusEl = card.querySelector(".fng-status");
+  const badgeEl = card.querySelector(".fng-badge");
+  if (!valueEl || !classEl || !updatedEl || !statusEl || !badgeEl) return;
+
+  valueEl.textContent = Number.isFinite(data.numericValue) ? String(data.numericValue) : "N/A";
+  classEl.textContent = data.translatedClass;
+  updatedEl.textContent = `업데이트: ${data.updatedTime}`;
 
   card.classList.remove("fng-fear", "fng-greed", "fng-neutral");
-  card.classList.add(`fng-${resolveFearGreedTone(rawClass, numericValue)}`);
+  card.classList.add(`fng-${data.tone}`);
 
-  if (isStale) {
+  if (data.isStale) {
     statusEl.textContent = "상태: 연결 지연 (마지막 수신값 유지)";
     badgeEl.textContent = "연결 지연";
-    badgeEl.className = "chip";
+    badgeEl.className = "chip fng-badge";
     return;
   }
 
   statusEl.textContent = "상태: 정상 수신";
   badgeEl.textContent = "실시간";
-  badgeEl.className = "chip chip-primary";
+  badgeEl.className = "chip chip-primary fng-badge";
+}
+
+function renderFearGreedMetricCard(card, data) {
+  const valueEl = card.querySelector(".metric-value");
+  const classEl = card.querySelector(".metric-classification");
+  const updatedEl = card.querySelector(".metric-updated");
+  const badgeEl = card.querySelector(".metric-badge");
+  if (!valueEl || !classEl || !updatedEl || !badgeEl) return;
+
+  valueEl.textContent = Number.isFinite(data.numericValue) ? String(data.numericValue) : "N/A";
+  classEl.textContent = data.translatedClass;
+  updatedEl.textContent = `업데이트: ${data.updatedTime}`;
+
+  card.classList.remove("metric-fear", "metric-greed", "metric-neutral");
+  card.classList.add(`metric-${data.tone}`);
+
+  if (data.isStale) {
+    badgeEl.textContent = "지연";
+    badgeEl.className = "chip metric-badge";
+    return;
+  }
+
+  badgeEl.textContent = "실시간";
+  badgeEl.className = "chip chip-primary metric-badge";
 }
 
 function renderFearGreedUnavailable() {
-  const card = refs.grid.querySelector('[data-section-type="fng"]');
-  if (!card) return;
+  const cards = getFearGreedCards();
+  if (!cards.length) return;
 
-  const valueEl = card.querySelector("#fng-value");
-  const classEl = card.querySelector("#fng-classification");
-  const updatedEl = card.querySelector("#fng-updated");
-  const statusEl = card.querySelector("#fng-status");
-  const badgeEl = card.querySelector("#fng-badge");
-  if (!valueEl || !classEl || !updatedEl || !statusEl || !badgeEl) return;
+  cards.forEach((card) => {
+    const sectionType = card.dataset.sectionType;
 
-  valueEl.textContent = "N/A";
-  classEl.textContent = "데이터 없음";
-  updatedEl.textContent = "업데이트: -";
-  statusEl.textContent = "상태: 연결 지연 (30초 후 재시도)";
-  badgeEl.textContent = "초기 실패";
-  badgeEl.className = "chip";
+    if (sectionType === "fng") {
+      const valueEl = card.querySelector(".fng-value");
+      const classEl = card.querySelector(".fng-classification");
+      const updatedEl = card.querySelector(".fng-updated");
+      const statusEl = card.querySelector(".fng-status");
+      const badgeEl = card.querySelector(".fng-badge");
+      if (!valueEl || !classEl || !updatedEl || !statusEl || !badgeEl) return;
+
+      valueEl.textContent = "N/A";
+      classEl.textContent = "데이터 없음";
+      updatedEl.textContent = "업데이트: -";
+      statusEl.textContent = "상태: 연결 지연 (30초 후 재시도)";
+      badgeEl.textContent = "초기 실패";
+      badgeEl.className = "chip fng-badge";
+      return;
+    }
+
+    if (sectionType === "metric" && card.dataset.metricKey === "fearGreed") {
+      const valueEl = card.querySelector(".metric-value");
+      const classEl = card.querySelector(".metric-classification");
+      const updatedEl = card.querySelector(".metric-updated");
+      const badgeEl = card.querySelector(".metric-badge");
+      if (!valueEl || !classEl || !updatedEl || !badgeEl) return;
+
+      valueEl.textContent = "N/A";
+      classEl.textContent = "데이터 없음";
+      updatedEl.textContent = "업데이트: -";
+      badgeEl.textContent = "초기 실패";
+      badgeEl.className = "chip metric-badge";
+    }
+  });
 }
 
 function resolveFearGreedTone(rawClass, numericValue) {
   const lower = String(rawClass).toLowerCase();
   if (lower.includes("greed")) return "greed";
   if (lower.includes("fear")) return "fear";
+
   if (Number.isFinite(numericValue)) {
     if (numericValue > 50) return "greed";
     if (numericValue < 50) return "fear";
   }
+
   return "neutral";
+}
+
+function resolveMetricLabel(metricKey) {
+  if (normalizeMetricKey(metricKey) === "fearGreed") return "Fear & Greed";
+  return "Metric";
 }
 
 function formatTimestamp(unixTimestamp) {
@@ -927,34 +1318,114 @@ async function apiRequest(path, options = {}) {
   }
   return data;
 }
-
-function normalizeLayout(layout) {
-  const base = cloneLayout(layout && typeof layout === "object" ? layout : DEFAULT_LAYOUT);
-  const sections = Array.isArray(base.sections) ? base.sections : [];
-
-  base.sections = sections
-    .map((section, index) => normalizeSection(section, index))
-    .filter(Boolean)
-    .sort((a, b) => a.order - b.order)
-    .map((section, index) => ({ ...section, order: index }));
-
-  if (!base.sections.length) {
-    return cloneLayout(DEFAULT_LAYOUT);
+function normalizeLayoutStore(layoutStore) {
+  const source = layoutStore && typeof layoutStore === "object" ? cloneLayout(layoutStore) : cloneLayout(DEFAULT_LAYOUT_STORE);
+  if (Array.isArray(source.layouts)) {
+    return normalizeLayoutStoreV2(source);
   }
+  return migrateLegacyLayoutStore(source);
+}
+
+function migrateLegacyLayoutStore(layoutV1) {
+  const legacySections = Array.isArray(layoutV1.sections) ? layoutV1.sections : [];
+  const fallbackInterval = inferIntervalFromSections(legacySections);
+
+  return normalizeLayoutStoreV2({
+    version: 2,
+    updatedAt: Number(layoutV1.updatedAt) || null,
+    updatedBy: String(layoutV1.updatedBy || "system"),
+    meta: typeof layoutV1.meta === "object" && layoutV1.meta ? layoutV1.meta : {},
+    activeLayoutId: "layout-main",
+    layouts: [
+      {
+        id: "layout-main",
+        name: "기본 레이아웃",
+        settings: { chartInterval: fallbackInterval },
+        sections: legacySections,
+      },
+    ],
+  });
+}
+
+function normalizeLayoutStoreV2(source) {
+  const layouts = (Array.isArray(source.layouts) ? source.layouts : [])
+    .map((layout, index) => normalizeSingleLayout(layout, index))
+    .filter(Boolean);
+
+  const normalizedLayouts = layouts.length
+    ? layouts
+    : [normalizeSingleLayout(DEFAULT_LAYOUT_STORE.layouts[0], 0)];
+
+  const activeLayoutId = normalizedLayouts.some((layout) => layout.id === String(source.activeLayoutId || ""))
+    ? String(source.activeLayoutId)
+    : normalizedLayouts[0].id;
 
   return {
-    version: Number(base.version) || 1,
-    updatedAt: base.updatedAt || null,
-    updatedBy: String(base.updatedBy || "system"),
-    meta: typeof base.meta === "object" && base.meta ? base.meta : {},
-    sections: base.sections,
+    version: 2,
+    updatedAt: Number(source.updatedAt) || null,
+    updatedBy: String(source.updatedBy || "system"),
+    meta: typeof source.meta === "object" && source.meta ? source.meta : {},
+    activeLayoutId,
+    layouts: normalizedLayouts,
   };
+}
+
+function normalizeSingleLayout(layout, index) {
+  if (!layout || typeof layout !== "object") return null;
+
+  const sections = Array.isArray(layout.sections) ? layout.sections : [];
+  const normalizedSections = sections
+    .map((section, sectionIndex) => normalizeSection(section, sectionIndex))
+    .filter(Boolean)
+    .sort((a, b) => a.order - b.order)
+    .map((section, sectionIndex) => ({ ...section, order: sectionIndex }));
+
+  const safeSections = normalizedSections.length
+    ? normalizedSections
+    : cloneLayout(DEFAULT_LAYOUT_STORE.layouts[0].sections).map((section, sectionIndex) =>
+        normalizeSection({ ...section, order: sectionIndex }, sectionIndex)
+      );
+
+  return {
+    id: String(layout.id || makeId("layout")),
+    name: String(layout.name || `레이아웃 ${index + 1}`),
+    settings: normalizeLayoutSettings(layout.settings, safeSections),
+    sections: safeSections,
+  };
+}
+
+function normalizeLayoutSettings(settings, sections) {
+  const requestedInterval = settings?.chartInterval;
+  const fallbackInterval = inferIntervalFromSections(Array.isArray(sections) ? sections : []);
+  return {
+    chartInterval: normalizeChartInterval(requestedInterval || fallbackInterval),
+  };
+}
+
+function inferIntervalFromSections(sections) {
+  const chart = sections.find((section) => section && section.type === "chart");
+  const candidate = chart?.widgetOptions?.interval;
+  return normalizeChartInterval(candidate);
+}
+
+function normalizeChartInterval(value) {
+  const interval = String(value || "60").toUpperCase();
+  if (interval === "1W") return "W";
+  if (interval === "1D") return "D";
+  if (interval === "1H" || interval === "H") return "60";
+  if (ALLOWED_CHART_INTERVALS.has(interval)) return interval;
+  return "60";
+}
+
+function normalizeMetricKey(metricKey) {
+  if (String(metricKey || "").toLowerCase() === "feargreed") return "fearGreed";
+  return "fearGreed";
 }
 
 function normalizeSection(section, fallbackOrder) {
   if (!section || typeof section !== "object") return null;
 
-  const type = ["chart", "fng", "ai"].includes(section.type) ? section.type : "chart";
+  const type = ALLOWED_SECTION_TYPES.has(section.type) ? section.type : "chart";
   const normalized = {
     id: String(section.id || makeId(type)),
     type,
@@ -969,11 +1440,23 @@ function normalizeSection(section, fallbackOrder) {
     normalized.badge = String(section.badge || "차트");
   }
 
+  if (type === "metric") {
+    normalized.metricKey = normalizeMetricKey(section.metricKey);
+  }
+
   return normalized;
 }
 
 function sortSections(sections) {
   return [...sections].sort((a, b) => a.order - b.order);
+}
+
+function duplicateSectionsWithNewIds(sections) {
+  return sortSections(Array.isArray(sections) ? sections : []).map((section, index) => ({
+    ...cloneLayout(section),
+    id: makeId(section.type || "section"),
+    order: index,
+  }));
 }
 
 function clampSpan(value) {

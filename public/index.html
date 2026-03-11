@@ -28,6 +28,13 @@
         <h1>God's Eye</h1>
       </div>
       <div class="header-actions">
+        <div class="layout-switcher">
+          <label class="layout-select-label" for="layout-select">레이아웃</label>
+          <select id="layout-select" class="field-select" aria-label="레이아웃 선택"></select>
+          <button id="layout-create-btn" class="btn btn-outline" type="button">추가</button>
+          <button id="layout-duplicate-btn" class="btn btn-outline" type="button">복제</button>
+          <button id="layout-rename-btn" class="btn btn-outline" type="button">이름변경</button>
+        </div>
         <button id="edit-toggle-btn" class="btn btn-outline" type="button">편집</button>
         <button id="layout-cancel-btn" class="btn btn-outline" type="button" hidden>취소</button>
       </div>
@@ -35,12 +42,20 @@
 
     <section id="layout-toolbar" class="layout-toolbar card mx-auto max-w-[1800px]" hidden>
       <div class="layout-toolbar-actions">
-        <button id="layout-add-btn" class="btn btn-outline" type="button">추가</button>
+        <button id="layout-add-btn" class="btn btn-outline" type="button">섹션 추가</button>
         <button id="layout-ai-add-btn" class="btn btn-outline" type="button">AI 추가</button>
+        <button id="layout-delete-btn" class="btn btn-outline" type="button">레이아웃 삭제</button>
       </div>
-      <p class="layout-toolbar-note">
-        현재 차트 엔진은 TradingView iframe 기준으로 동작하며 차트 간 커서 점선 동기화는 지원하지 않습니다.
-      </p>
+      <div class="layout-toolbar-right">
+        <div class="timeframe-segment" role="group" aria-label="글로벌 봉주기">
+          <button class="timeframe-btn" data-interval="W" type="button">주봉</button>
+          <button class="timeframe-btn" data-interval="D" type="button">일봉</button>
+          <button class="timeframe-btn" data-interval="60" type="button">1시간봉</button>
+        </div>
+        <p class="layout-toolbar-note">
+          선택한 레이아웃의 모든 차트에 글로벌 봉주기 설정이 우선 적용됩니다.
+        </p>
+      </div>
     </section>
 
     <main id="dashboard-grid" class="dashboard-grid mx-auto max-w-[1800px]"></main>
@@ -59,7 +74,7 @@
     <div id="symbol-modal" class="modal-root" hidden>
       <div class="modal-backdrop" data-close-modal="symbol"></div>
       <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="symbol-modal-title">
-        <h2 id="symbol-modal-title">심볼 추가</h2>
+        <h2 id="symbol-modal-title">Chart 심볼 추가</h2>
         <label class="field-label" for="symbol-input">거래소:심볼</label>
         <input id="symbol-input" class="field-input" type="text" placeholder="예: NASDAQ:TSLA" />
         <label class="field-label" for="title-input">표시명</label>
@@ -68,6 +83,19 @@
         <div class="modal-actions">
           <button id="symbol-modal-submit" class="btn btn-primary" type="button">추가</button>
           <button id="symbol-modal-cancel" class="btn btn-outline" type="button">닫기</button>
+        </div>
+      </section>
+    </div>
+
+    <div id="section-modal" class="modal-root" hidden>
+      <div class="modal-backdrop" data-close-modal="section"></div>
+      <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="section-modal-title">
+        <h2 id="section-modal-title">섹션 추가</h2>
+        <p class="ai-modal-status">추가할 섹션 타입을 선택해 주세요.</p>
+        <div class="modal-actions modal-actions-inline">
+          <button id="section-modal-chart-btn" class="btn btn-primary" type="button">Chart</button>
+          <button id="section-modal-metric-btn" class="btn btn-outline" type="button">Metric</button>
+          <button id="section-modal-cancel" class="btn btn-outline" type="button">닫기</button>
         </div>
       </section>
     </div>

@@ -12,6 +12,7 @@
   --neutral: #f0c75e;
   --radius: 14px;
   --section-content-height: 290px;
+  --metric-content-height: 118px;
 }
 
 *,
@@ -90,6 +91,29 @@ h1 {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.layout-switcher {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.layout-select-label {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.field-select {
+  border: 1px solid rgba(149, 163, 196, 0.36);
+  border-radius: 8px;
+  background: rgba(5, 8, 13, 0.8);
+  color: var(--text);
+  padding: 6px 10px;
+  font-size: 12px;
+  min-width: 168px;
 }
 
 .layout-toolbar {
@@ -105,6 +129,41 @@ h1 {
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+}
+
+.layout-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.timeframe-segment {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(149, 163, 196, 0.3);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.timeframe-btn {
+  border: none;
+  background: rgba(8, 13, 22, 0.76);
+  color: var(--text-muted);
+  padding: 6px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.timeframe-btn + .timeframe-btn {
+  border-left: 1px solid rgba(149, 163, 196, 0.22);
+}
+
+.timeframe-btn.active {
+  color: #002636;
+  background: linear-gradient(120deg, var(--accent), var(--accent-2));
 }
 
 .layout-toolbar-note {
@@ -325,6 +384,49 @@ h2 {
   color: var(--neutral);
 }
 
+.metric-card .card-title-row {
+  margin-bottom: 4px;
+}
+
+.metric-body {
+  min-height: var(--metric-content-height);
+  height: var(--metric-content-height);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.metric-value {
+  margin: 0;
+  font-family: "Space Grotesk", "Segoe UI", sans-serif;
+  font-weight: 700;
+  font-size: 34px;
+  line-height: 1;
+}
+
+.metric-classification,
+.metric-updated {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.metric-fear .metric-value,
+.metric-fear .metric-classification {
+  color: var(--fear);
+}
+
+.metric-greed .metric-value,
+.metric-greed .metric-classification {
+  color: var(--greed);
+}
+
+.metric-neutral .metric-value,
+.metric-neutral .metric-classification {
+  color: var(--neutral);
+}
+
 .ai-card-body {
   min-height: var(--section-content-height);
   height: var(--section-content-height);
@@ -440,6 +542,10 @@ h2 {
   margin-top: 12px;
 }
 
+.modal-actions-inline {
+  justify-content: flex-start;
+}
+
 .ai-modal-status {
   margin: 6px 0 10px;
   color: var(--text-muted);
@@ -510,6 +616,7 @@ h2 {
 @media (max-width: 640px) {
   :root {
     --section-content-height: 260px;
+    --metric-content-height: 110px;
   }
 
   body {
@@ -525,10 +632,22 @@ h2 {
     align-items: flex-start;
   }
 
+  .layout-switcher {
+    width: 100%;
+  }
+
+  .field-select {
+    min-width: 0;
+    flex: 1;
+  }
 
   .layout-toolbar {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .layout-toolbar-right {
+    justify-content: flex-start;
   }
 
   .ticker-floating {

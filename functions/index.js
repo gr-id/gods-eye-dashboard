@@ -40,89 +40,104 @@ const CANDIDATE_SYMBOLS = [
   { symbol: "NASDAQ:TSLA", title: "Tesla", reason: "고베타 성장주 민감도" }
 ];
 
-const DEFAULT_LAYOUT = {
-  version: 1,
+const ALLOWED_CHART_INTERVALS = new Set(["W", "D", "60"]);
+const ALLOWED_SECTION_TYPES = new Set(["chart", "fng", "ai", "metric"]);
+
+const DEFAULT_LAYOUT_SECTIONS = [
+  {
+    id: "btc-main",
+    type: "chart",
+    title: "BTC/USD 메인 차트",
+    symbol: "BINANCE:BTCUSDT",
+    badge: "주요 지표",
+    span: 2,
+    order: 0,
+    widgetOptions: { interval: "30", main: true }
+  },
+  {
+    id: "fng-core",
+    type: "fng",
+    title: "Fear & Greed",
+    span: 1,
+    order: 1,
+    widgetOptions: {}
+  },
+  {
+    id: "vix",
+    type: "chart",
+    title: "VIX",
+    symbol: "AMEX:VXX",
+    badge: "변동성",
+    span: 1,
+    order: 2,
+    widgetOptions: { interval: "60" }
+  },
+  {
+    id: "dxy",
+    type: "chart",
+    title: "DXY",
+    symbol: "AMEX:UUP",
+    badge: "달러 인덱스",
+    span: 1,
+    order: 3,
+    widgetOptions: { interval: "60" }
+  },
+  {
+    id: "us10y",
+    type: "chart",
+    title: "US10Y",
+    symbol: "AMEX:IEF",
+    badge: "거시 금리",
+    span: 1,
+    order: 4,
+    widgetOptions: { interval: "60" }
+  },
+  {
+    id: "ndx",
+    type: "chart",
+    title: "Nasdaq 100",
+    symbol: "NASDAQ:QQQ",
+    badge: "Equity",
+    span: 1,
+    order: 5,
+    widgetOptions: { interval: "60" }
+  },
+  {
+    id: "spx",
+    type: "chart",
+    title: "S&P 500",
+    symbol: "AMEX:SPY",
+    badge: "Equity",
+    span: 1,
+    order: 6,
+    widgetOptions: { interval: "60" }
+  },
+  {
+    id: "ai-overview",
+    type: "ai",
+    title: "AI 시황 분석",
+    span: 3,
+    order: 7,
+    widgetOptions: {}
+  }
+];
+
+const DEFAULT_LAYOUT_STORE = {
+  version: 2,
   updatedAt: null,
   updatedBy: "system",
   meta: {},
-  sections: [
+  activeLayoutId: "layout-main",
+  layouts: [
     {
-      id: "btc-main",
-      type: "chart",
-      title: "BTC/USD 메인 차트",
-      symbol: "BINANCE:BTCUSDT",
-      badge: "주요 지표",
-      span: 2,
-      order: 0,
-      widgetOptions: { interval: "30", main: true }
+      id: "layout-main",
+      name: "기본 레이아웃",
+      settings: {
+        chartInterval: "60",
+      },
+      sections: DEFAULT_LAYOUT_SECTIONS,
     },
-    {
-      id: "fng-core",
-      type: "fng",
-      title: "Fear & Greed",
-      span: 1,
-      order: 1,
-      widgetOptions: {}
-    },
-    {
-      id: "vix",
-      type: "chart",
-      title: "VIX",
-      symbol: "AMEX:VXX",
-      badge: "변동성",
-      span: 1,
-      order: 2,
-      widgetOptions: { interval: "60" }
-    },
-    {
-      id: "dxy",
-      type: "chart",
-      title: "DXY",
-      symbol: "AMEX:UUP",
-      badge: "달러 인덱스",
-      span: 1,
-      order: 3,
-      widgetOptions: { interval: "60" }
-    },
-    {
-      id: "us10y",
-      type: "chart",
-      title: "US10Y",
-      symbol: "AMEX:IEF",
-      badge: "거시 금리",
-      span: 1,
-      order: 4,
-      widgetOptions: { interval: "60" }
-    },
-    {
-      id: "ndx",
-      type: "chart",
-      title: "Nasdaq 100",
-      symbol: "NASDAQ:QQQ",
-      badge: "Equity",
-      span: 1,
-      order: 5,
-      widgetOptions: { interval: "60" }
-    },
-    {
-      id: "spx",
-      type: "chart",
-      title: "S&P 500",
-      symbol: "AMEX:SPY",
-      badge: "Equity",
-      span: 1,
-      order: 6,
-      widgetOptions: { interval: "60" }
-    },
-    {
-      id: "ai-overview",
-      type: "ai",
-      title: "AI 시황 분석",
-      span: 3,
-      order: 7,
-      widgetOptions: {}
-    }
-  ]
+  ],
 };
 
 const app = express();
@@ -152,7 +167,7 @@ app.post("/api/layout/save", async (req, res) => {
       return res.status(200).json({ ok: true });
     }
 
-    const incoming = normalizeLayout(req.body?.layout || DEFAULT_LAYOUT);
+    const incoming = normalizeLayout(req.body?.layout || DEFAULT_LAYOUT_STORE);
     const toWrite = {
       ...incoming,
       updatedAt: Date.now(),
@@ -274,7 +289,7 @@ async function getOrCreateLayout() {
     return normalizeLayout(snap.data());
   }
 
-  const initial = normalizeLayout(DEFAULT_LAYOUT);
+  const initial = normalizeLayout(DEFAULT_LAYOUT_STORE);
   await LAYOUT_DOC.set({
     ...initial,
     updatedAt: Date.now(),
@@ -290,28 +305,113 @@ function validatePin(inputPin) {
 }
 
 function normalizeLayout(layout) {
-  const source = layout && typeof layout === "object" ? clone(layout) : clone(DEFAULT_LAYOUT);
-  const sections = Array.isArray(source.sections) ? source.sections : [];
+  const source = layout && typeof layout === "object" ? clone(layout) : clone(DEFAULT_LAYOUT_STORE);
+  if (Array.isArray(source.layouts)) {
+    return normalizeLayoutStoreV2(source);
+  }
+  return migrateLegacyLayoutV1(source);
+}
 
-  const normalizedSections = sections
-    .map((section, index) => normalizeSection(section, index))
-    .filter(Boolean)
-    .sort((a, b) => a.order - b.order)
-    .map((section, index) => ({ ...section, order: index }));
+function migrateLegacyLayoutV1(layoutV1) {
+  const legacySections = Array.isArray(layoutV1.sections) ? layoutV1.sections : [];
+  const fallbackInterval = inferIntervalFromSections(legacySections);
+
+  return normalizeLayoutStoreV2({
+    version: 2,
+    updatedAt: Number(layoutV1.updatedAt) || null,
+    updatedBy: String(layoutV1.updatedBy || "system"),
+    meta: typeof layoutV1.meta === "object" && layoutV1.meta ? layoutV1.meta : {},
+    activeLayoutId: "layout-main",
+    layouts: [
+      {
+        id: "layout-main",
+        name: "기본 레이아웃",
+        settings: { chartInterval: fallbackInterval },
+        sections: legacySections,
+      },
+    ],
+  });
+}
+
+function normalizeLayoutStoreV2(source) {
+  const layouts = (Array.isArray(source.layouts) ? source.layouts : [])
+    .map((layout, index) => normalizeSingleLayout(layout, index))
+    .filter(Boolean);
+
+  const normalizedLayouts = layouts.length
+    ? layouts
+    : [normalizeSingleLayout(DEFAULT_LAYOUT_STORE.layouts[0], 0)];
+
+  const activeLayoutId = normalizedLayouts.some((layout) => layout.id === String(source.activeLayoutId || ""))
+    ? String(source.activeLayoutId)
+    : normalizedLayouts[0].id;
 
   return {
-    version: Number(source.version) || 1,
+    version: 2,
     updatedAt: Number(source.updatedAt) || null,
     updatedBy: String(source.updatedBy || "system"),
     meta: typeof source.meta === "object" && source.meta ? source.meta : {},
-    sections: normalizedSections.length ? normalizedSections : clone(DEFAULT_LAYOUT.sections),
+    activeLayoutId,
+    layouts: normalizedLayouts,
   };
+}
+
+function normalizeSingleLayout(layout, index) {
+  if (!layout || typeof layout !== "object") return null;
+
+  const sections = Array.isArray(layout.sections) ? layout.sections : [];
+  const normalizedSections = sections
+    .map((section, sectionIndex) => normalizeSection(section, sectionIndex))
+    .filter(Boolean)
+    .sort((a, b) => a.order - b.order)
+    .map((section, sectionIndex) => ({ ...section, order: sectionIndex }));
+
+  const safeSections = normalizedSections.length
+    ? normalizedSections
+    : clone(DEFAULT_LAYOUT_SECTIONS).map((section, sectionIndex) =>
+        normalizeSection({ ...section, order: sectionIndex }, sectionIndex)
+      );
+
+  return {
+    id: String(layout.id || makeId("layout")),
+    name: String(layout.name || `레이아웃 ${index + 1}`),
+    settings: normalizeLayoutSettings(layout.settings, safeSections),
+    sections: safeSections,
+  };
+}
+
+function normalizeLayoutSettings(settings, sections) {
+  const requestedInterval = settings?.chartInterval;
+  const fallbackInterval = inferIntervalFromSections(Array.isArray(sections) ? sections : []);
+  return {
+    chartInterval: normalizeChartInterval(requestedInterval || fallbackInterval),
+  };
+}
+
+function inferIntervalFromSections(sections) {
+  const chart = sections.find((section) => section && section.type === "chart");
+  const candidate = chart?.widgetOptions?.interval;
+  return normalizeChartInterval(candidate);
+}
+
+function normalizeChartInterval(value) {
+  const interval = String(value || "60").toUpperCase();
+  if (interval === "1W") return "W";
+  if (interval === "1D") return "D";
+  if (interval === "1H" || interval === "H") return "60";
+  if (ALLOWED_CHART_INTERVALS.has(interval)) return interval;
+  return "60";
+}
+
+function normalizeMetricKey(metricKey) {
+  if (String(metricKey || "").toLowerCase() === "feargreed") return "fearGreed";
+  return "fearGreed";
 }
 
 function normalizeSection(section, fallbackOrder) {
   if (!section || typeof section !== "object") return null;
 
-  const type = ["chart", "fng", "ai"].includes(section.type) ? section.type : "chart";
+  const type = ALLOWED_SECTION_TYPES.has(section.type) ? section.type : "chart";
   const normalized = {
     id: String(section.id || makeId(type)),
     type,
@@ -324,6 +424,10 @@ function normalizeSection(section, fallbackOrder) {
   if (type === "chart") {
     normalized.symbol = String(section.symbol || "BINANCE:BTCUSDT").toUpperCase();
     normalized.badge = String(section.badge || "차트");
+  }
+
+  if (type === "metric") {
+    normalized.metricKey = normalizeMetricKey(section.metricKey);
   }
 
   return normalized;
