@@ -35,6 +35,12 @@
           <button id="layout-duplicate-btn" class="btn btn-outline" type="button">복제</button>
           <button id="layout-rename-btn" class="btn btn-outline" type="button">이름변경</button>
         </div>
+        <div class="timeframe-segment header-timeframe" role="group" aria-label="글로벌 봉주기">
+          <button class="timeframe-btn" data-interval="30" type="button">30분봉</button>
+          <button class="timeframe-btn" data-interval="D" type="button">일봉</button>
+          <button class="timeframe-btn" data-interval="W" type="button">주봉</button>
+          <button class="timeframe-btn" data-interval="M" type="button">월봉</button>
+        </div>
         <button id="edit-toggle-btn" class="btn btn-outline" type="button">편집</button>
         <button id="layout-cancel-btn" class="btn btn-outline" type="button" hidden>취소</button>
       </div>
@@ -46,16 +52,9 @@
         <button id="layout-ai-add-btn" class="btn btn-outline" type="button">AI 추가</button>
         <button id="layout-delete-btn" class="btn btn-outline" type="button">레이아웃 삭제</button>
       </div>
-      <div class="layout-toolbar-right">
-        <div class="timeframe-segment" role="group" aria-label="글로벌 봉주기">
-          <button class="timeframe-btn" data-interval="W" type="button">주봉</button>
-          <button class="timeframe-btn" data-interval="D" type="button">일봉</button>
-          <button class="timeframe-btn" data-interval="60" type="button">1시간봉</button>
-        </div>
-        <p class="layout-toolbar-note">
-          선택한 레이아웃의 모든 차트에 글로벌 봉주기 설정이 우선 적용됩니다.
-        </p>
-      </div>
+      <p class="layout-toolbar-note">
+        선택한 레이아웃의 모든 차트에 글로벌 봉주기 설정이 우선 적용됩니다.
+      </p>
     </section>
 
     <main id="dashboard-grid" class="dashboard-grid mx-auto max-w-[1800px]"></main>
@@ -75,6 +74,12 @@
       <div class="modal-backdrop" data-close-modal="symbol"></div>
       <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="symbol-modal-title">
         <h2 id="symbol-modal-title">Chart 심볼 추가</h2>
+        <label class="field-label" for="symbol-search-input">심볼 검색</label>
+        <div class="inline-field-row">
+          <input id="symbol-search-input" class="field-input" type="text" placeholder="예: tesla, 005930, 삼성" />
+          <button id="symbol-search-btn" class="btn btn-outline" type="button">검색</button>
+        </div>
+        <div id="symbol-search-results" class="symbol-search-results"></div>
         <label class="field-label" for="symbol-input">거래소:심볼</label>
         <input id="symbol-input" class="field-input" type="text" placeholder="예: NASDAQ:TSLA" />
         <label class="field-label" for="title-input">표시명</label>
@@ -104,6 +109,16 @@
       <div class="modal-backdrop" data-close-modal="ai"></div>
       <section class="modal-panel" role="dialog" aria-modal="true" aria-labelledby="ai-modal-title">
         <h2 id="ai-modal-title">AI 추천 심볼</h2>
+        <label class="field-label" for="ai-query-input">요청사항</label>
+        <div class="inline-field-row">
+          <input
+            id="ai-query-input"
+            class="field-input"
+            type="text"
+            placeholder="예: 한국 주식에서 거래량이 많은 종목들이 궁금해"
+          />
+          <button id="ai-query-submit" class="btn btn-outline" type="button">검색</button>
+        </div>
         <p id="ai-modal-status" class="ai-modal-status">추천 목록을 준비하는 중입니다.</p>
         <div id="ai-suggest-list" class="ai-suggest-list"></div>
         <div class="modal-actions">

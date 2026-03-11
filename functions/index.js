@@ -18,30 +18,217 @@ const FRED_API_KEY = defineSecret("FRED_API_KEY");
 const LAYOUT_ADMIN_PIN = defineSecret("LAYOUT_ADMIN_PIN");
 
 const CANDIDATE_SYMBOLS = [
-  { symbol: "BINANCE:BTCUSDT", title: "BTC/USD", reason: "디지털 자산 리스크 온/오프" },
-  { symbol: "AMEX:SPY", title: "S&P 500", reason: "미국 대형주 대표 지수" },
-  { symbol: "NASDAQ:QQQ", title: "Nasdaq 100", reason: "성장주/기술주 민감도" },
-  { symbol: "AMEX:IWM", title: "Russell 2000", reason: "중소형주 체력 확인" },
-  { symbol: "AMEX:VXX", title: "VIX Proxy", reason: "변동성 리스크 확인" },
-  { symbol: "AMEX:UUP", title: "DXY Proxy", reason: "달러 강세 흐름 추적" },
-  { symbol: "AMEX:IEF", title: "US10Y Proxy", reason: "중장기 금리 방향성" },
-  { symbol: "AMEX:TLT", title: "US20Y+ Bond", reason: "장기채 듀레이션 민감도" },
-  { symbol: "COMEX:GC1!", title: "Gold Futures", reason: "안전자산 선호도" },
-  { symbol: "NYMEX:CL1!", title: "Crude Oil Futures", reason: "에너지/인플레이션 압력" },
-  { symbol: "AMEX:GLD", title: "Gold ETF", reason: "금 현물 대체 추적" },
-  { symbol: "AMEX:SLV", title: "Silver ETF", reason: "산업+귀금속 혼합 민감도" },
-  { symbol: "AMEX:XLE", title: "Energy Sector", reason: "에너지 섹터 상대강도" },
-  { symbol: "AMEX:XLK", title: "Technology Sector", reason: "기술 섹터 모멘텀" },
-  { symbol: "AMEX:XLF", title: "Financial Sector", reason: "금리-은행 민감도" },
-  { symbol: "AMEX:EEM", title: "Emerging Markets", reason: "신흥국 리스크 선호" },
-  { symbol: "AMEX:FXI", title: "China Large Cap", reason: "중국 대형주 체력" },
-  { symbol: "NASDAQ:NVDA", title: "NVIDIA", reason: "AI 테마 선도주" },
-  { symbol: "NASDAQ:AAPL", title: "Apple", reason: "메가캡 수요 확인" },
-  { symbol: "NASDAQ:TSLA", title: "Tesla", reason: "고베타 성장주 민감도" }
+  {
+    symbol: "BINANCE:BTCUSDT",
+    title: "BTC/USD",
+    reason: "디지털 자산 위험선호 지표",
+    tags: ["crypto", "risk-on", "global"],
+    aliases: ["btc", "bitcoin", "비트코인"],
+  },
+  {
+    symbol: "AMEX:SPY",
+    title: "S&P 500",
+    reason: "미국 대형주 대표 지수",
+    tags: ["us", "index", "equity", "risk-on"],
+    aliases: ["sp500", "s&p", "미국지수"],
+  },
+  {
+    symbol: "NASDAQ:QQQ",
+    title: "Nasdaq 100",
+    reason: "기술 성장주 민감도",
+    tags: ["us", "index", "tech", "ai", "risk-on"],
+    aliases: ["nasdaq", "qqq", "나스닥"],
+  },
+  {
+    symbol: "AMEX:IWM",
+    title: "Russell 2000",
+    reason: "중소형주 체력 확인",
+    tags: ["us", "small-cap", "equity", "risk-on"],
+    aliases: ["russell", "iwm"],
+  },
+  {
+    symbol: "AMEX:VXX",
+    title: "VIX Proxy",
+    reason: "변동성 리스크 확인",
+    tags: ["volatility", "hedge", "risk-off"],
+    aliases: ["vix", "변동성", "공포지수"],
+  },
+  {
+    symbol: "AMEX:UUP",
+    title: "DXY Proxy",
+    reason: "달러 강세 흐름 추적",
+    tags: ["dollar", "macro", "risk-off"],
+    aliases: ["dxy", "달러", "환율"],
+  },
+  {
+    symbol: "AMEX:IEF",
+    title: "US10Y Proxy",
+    reason: "중장기 금리 방향성",
+    tags: ["rates", "bond", "macro"],
+    aliases: ["us10y", "국채", "금리"],
+  },
+  {
+    symbol: "AMEX:TLT",
+    title: "US20Y+ Bond",
+    reason: "장기채 듀레이션 민감도",
+    tags: ["rates", "bond", "duration"],
+    aliases: ["tlt", "장기채"],
+  },
+  {
+    symbol: "COMEX:GC1!",
+    title: "Gold Futures",
+    reason: "안전자산 선호도",
+    tags: ["commodity", "gold", "risk-off", "inflation"],
+    aliases: ["gold", "금", "안전자산"],
+  },
+  {
+    symbol: "NYMEX:CL1!",
+    title: "Crude Oil Futures",
+    reason: "에너지/인플레이션 압력",
+    tags: ["commodity", "energy", "inflation"],
+    aliases: ["oil", "원유", "에너지"],
+  },
+  {
+    symbol: "AMEX:GLD",
+    title: "Gold ETF",
+    reason: "금 현물 대체 추적",
+    tags: ["commodity", "gold", "etf", "risk-off"],
+    aliases: ["gld", "gold etf"],
+  },
+  {
+    symbol: "AMEX:SLV",
+    title: "Silver ETF",
+    reason: "산업+귀금속 혼합 민감도",
+    tags: ["commodity", "silver", "etf"],
+    aliases: ["silver", "은", "slv"],
+  },
+  {
+    symbol: "AMEX:XLE",
+    title: "Energy Sector",
+    reason: "에너지 섹터 상대강도",
+    tags: ["us", "sector", "energy", "theme"],
+    aliases: ["xle", "에너지섹터"],
+  },
+  {
+    symbol: "AMEX:XLK",
+    title: "Technology Sector",
+    reason: "기술 섹터 모멘텀",
+    tags: ["us", "sector", "tech", "ai", "theme"],
+    aliases: ["xlk", "기술섹터"],
+  },
+  {
+    symbol: "AMEX:XLF",
+    title: "Financial Sector",
+    reason: "금리-은행 민감도",
+    tags: ["us", "sector", "financial", "macro"],
+    aliases: ["xlf", "금융섹터"],
+  },
+  {
+    symbol: "AMEX:EEM",
+    title: "Emerging Markets",
+    reason: "신흥국 위험선호 흐름",
+    tags: ["em", "global", "risk-on"],
+    aliases: ["eem", "신흥국"],
+  },
+  {
+    symbol: "AMEX:FXI",
+    title: "China Large Cap",
+    reason: "중국 대형주 체력",
+    tags: ["china", "global", "equity"],
+    aliases: ["fxi", "중국"],
+  },
+  {
+    symbol: "NASDAQ:NVDA",
+    title: "NVIDIA",
+    reason: "AI 인프라 대표 종목",
+    tags: ["us", "ai", "semiconductor", "theme"],
+    aliases: ["nvda", "엔비디아", "ai"],
+  },
+  {
+    symbol: "NASDAQ:MSFT",
+    title: "Microsoft",
+    reason: "엔터프라이즈 AI 수요 확인",
+    tags: ["us", "ai", "cloud", "theme"],
+    aliases: ["msft", "마이크로소프트"],
+  },
+  {
+    symbol: "NASDAQ:AAPL",
+    title: "Apple",
+    reason: "메가캡 소비/디바이스 수요",
+    tags: ["us", "mega-cap", "consumer"],
+    aliases: ["aapl", "애플"],
+  },
+  {
+    symbol: "NASDAQ:TSLA",
+    title: "Tesla",
+    reason: "고베타 성장주 민감도",
+    tags: ["us", "ev", "high-beta", "theme"],
+    aliases: ["tesla", "tsla", "테슬라", "전기차"],
+  },
+  {
+    symbol: "KRX:005930",
+    title: "Samsung Electronics",
+    reason: "한국 대표 대형 반도체/IT",
+    tags: ["kr", "korea", "semiconductor", "large-cap", "volume"],
+    aliases: ["삼성전자", "005930", "samsung"],
+  },
+  {
+    symbol: "KRX:000660",
+    title: "SK hynix",
+    reason: "메모리 사이클 핵심 종목",
+    tags: ["kr", "korea", "semiconductor", "large-cap", "volume", "ai"],
+    aliases: ["하이닉스", "sk하이닉스", "000660"],
+  },
+  {
+    symbol: "KRX:035420",
+    title: "NAVER",
+    reason: "플랫폼/AI 서비스 확장성",
+    tags: ["kr", "korea", "internet", "ai", "theme"],
+    aliases: ["네이버", "035420", "naver"],
+  },
+  {
+    symbol: "KRX:035720",
+    title: "Kakao",
+    reason: "국내 플랫폼 민감도",
+    tags: ["kr", "korea", "internet", "theme"],
+    aliases: ["카카오", "035720", "kakao"],
+  },
+  {
+    symbol: "KRX:005380",
+    title: "Hyundai Motor",
+    reason: "완성차/수출 경기 민감도",
+    tags: ["kr", "korea", "auto", "export", "large-cap", "volume"],
+    aliases: ["현대차", "005380"],
+  },
+  {
+    symbol: "KRX:051910",
+    title: "LG Chem",
+    reason: "배터리 밸류체인 핵심",
+    tags: ["kr", "korea", "battery", "theme"],
+    aliases: ["lg화학", "051910"],
+  },
+  {
+    symbol: "KRX:207940",
+    title: "Samsung Biologics",
+    reason: "바이오 대형주 체력 확인",
+    tags: ["kr", "korea", "bio", "large-cap"],
+    aliases: ["삼성바이오로직스", "207940"],
+  },
 ];
 
-const ALLOWED_CHART_INTERVALS = new Set(["W", "D", "60"]);
+const RISK_ON_SYMBOLS = new Set(["NASDAQ:QQQ", "NASDAQ:NVDA", "NASDAQ:TSLA", "AMEX:XLE", "KRX:000660"]);
+const ALLOWED_CHART_INTERVALS = new Set(["30", "W", "D", "M", "60"]);
 const ALLOWED_SECTION_TYPES = new Set(["chart", "fng", "ai", "metric"]);
+const YAHOO_TO_TRADINGVIEW_EXCHANGE = {
+  NMS: "NASDAQ",
+  NAS: "NASDAQ",
+  NYQ: "NYSE",
+  ASE: "AMEX",
+  PCX: "AMEX",
+  AMEX: "AMEX",
+  KSC: "KRX",
+  KOE: "KRX",
+};
 
 const DEFAULT_LAYOUT_SECTIONS = [
   {
@@ -133,7 +320,7 @@ const DEFAULT_LAYOUT_STORE = {
       id: "layout-main",
       name: "기본 레이아웃",
       settings: {
-        chartInterval: "60",
+        chartInterval: "30",
       },
       sections: DEFAULT_LAYOUT_SECTIONS,
     },
@@ -187,11 +374,13 @@ app.post("/api/ai/suggest-symbols", async (req, res) => {
 
   try {
     const sections = Array.isArray(req.body?.sections) ? req.body.sections : [];
+    const query = String(req.body?.query || "").trim();
     const existingSymbols = new Set(
       sections
         .filter((x) => x && x.type === "chart" && x.symbol)
         .map((x) => String(x.symbol).toUpperCase())
     );
+    const scopedCandidates = getQueryScopedCandidates(query, existingSymbols);
 
     const [news, fred, fearGreed] = await Promise.all([
       safeFetchNews(partialReasons),
@@ -205,10 +394,11 @@ app.post("/api/ai/suggest-symbols", async (req, res) => {
       try {
         recommendations = await suggestWithGemini({
           geminiKey,
-          existingSymbols,
+          candidates: scopedCandidates,
           news,
           fred,
           fearGreed,
+          query,
         });
       } catch (error) {
         partialReasons.push(`Gemini 호출 실패: ${String(error.message || error)}`);
@@ -217,17 +407,50 @@ app.post("/api/ai/suggest-symbols", async (req, res) => {
 
     if (!recommendations.length) {
       partialReasons.push("Gemini 응답 없음 또는 파싱 실패");
-      recommendations = buildFallbackRecommendations(existingSymbols, fearGreed);
+      recommendations = buildFallbackRecommendations(scopedCandidates, fearGreed, query);
     }
 
     return res.status(200).json({
       recommendations: recommendations.slice(0, 8),
+      query,
       partial: partialReasons.length > 0,
       issues: partialReasons,
     });
   } catch (error) {
     logger.error("suggestSymbolsAI failed", error);
     return res.status(500).json({ error: "AI 심볼 추천에 실패했습니다." });
+  }
+});
+
+app.post("/api/symbols/search", async (req, res) => {
+  try {
+    const query = String(req.body?.query || "").trim();
+    const requested = Number(req.body?.limit);
+    const limit = Number.isFinite(requested) ? Math.min(Math.max(Math.round(requested), 1), 20) : 10;
+
+    const catalogResults = searchLocalSymbols(query, limit);
+    const seen = new Set(catalogResults.map((item) => item.symbol));
+    const merged = [...catalogResults];
+
+    if (merged.length < limit && query) {
+      try {
+        const yahooResults = await searchYahooSymbols(query, limit - merged.length);
+        yahooResults.forEach((item) => {
+          if (seen.has(item.symbol)) return;
+          seen.add(item.symbol);
+          merged.push(item);
+        });
+      } catch (error) {
+        logger.warn("searchSymbols yahoo fallback failed", {
+          message: String(error.message || error),
+        });
+      }
+    }
+
+    return res.status(200).json({ query, results: merged.slice(0, limit) });
+  } catch (error) {
+    logger.error("searchSymbols failed", error);
+    return res.status(500).json({ error: "심볼 검색에 실패했습니다." });
   }
 });
 
@@ -246,23 +469,27 @@ app.post("/api/ai/analyze-layout", async (req, res) => {
       safeFetchFearGreed(partialReasons),
     ]);
 
-    let analysis = "";
+    let report = null;
     const geminiKey = GEMINI_API_KEY.value();
     if (geminiKey) {
       try {
-        analysis = await analyzeWithGemini({ geminiKey, symbols, news, fred, fearGreed });
+        report = await analyzeWithGemini({ geminiKey, symbols, news, fred, fearGreed });
       } catch (error) {
         partialReasons.push(`Gemini 호출 실패: ${String(error.message || error)}`);
       }
     }
 
-    if (!analysis) {
+    if (!report) {
       partialReasons.push("Gemini 응답 없음 또는 파싱 실패");
-      analysis = buildFallbackAnalysis({ symbols, news, fred, fearGreed });
+      report = buildFallbackReport({ symbols, news, fred, fearGreed });
     }
+
+    report = normalizeAiReport(report, symbols);
+    const analysis = buildLegacyAnalysisText(report);
 
     return res.status(200).json({
       analysis,
+      report,
       partial: partialReasons.length > 0,
       issues: partialReasons,
     });
@@ -395,12 +622,14 @@ function inferIntervalFromSections(sections) {
 }
 
 function normalizeChartInterval(value) {
-  const interval = String(value || "60").toUpperCase();
+  const interval = String(value || "30").toUpperCase();
   if (interval === "1W") return "W";
   if (interval === "1D") return "D";
+  if (interval === "1M" || interval === "1MO" || interval === "MO") return "M";
+  if (interval === "30M" || interval === "30MIN" || interval === "M30") return "30";
   if (interval === "1H" || interval === "H") return "60";
   if (ALLOWED_CHART_INTERVALS.has(interval)) return interval;
-  return "60";
+  return "30";
 }
 
 function normalizeMetricKey(metricKey) {
@@ -541,16 +770,17 @@ async function fetchFearGreed() {
   };
 }
 
-async function suggestWithGemini({ geminiKey, existingSymbols, news, fred, fearGreed }) {
-  const allowed = CANDIDATE_SYMBOLS.filter((item) => !existingSymbols.has(item.symbol));
+async function suggestWithGemini({ geminiKey, candidates, news, fred, fearGreed, query }) {
+  const allowed = Array.isArray(candidates) ? candidates : [];
   if (!allowed.length) return [];
 
   const prompt = [
     "당신은 거시/자산배분 분석가입니다.",
-    "아래 후보 심볼 중에서 오늘 시황에 맞는 8개를 고르세요.",
-    "반드시 후보 목록에 있는 symbol만 사용하고, JSON 객체만 반환하세요.",
+    "사용자 요청과 오늘 시황에 맞는 후보 심볼을 고르세요.",
+    "반드시 후보 목록에 있는 symbol만 사용하고 JSON 객체만 반환하세요.",
     "형식: {\"recommendations\":[{\"symbol\":\"...\",\"title\":\"...\",\"reason\":\"...\"}]}",
     "reason은 1문장 한국어로 간결하게 작성하세요.",
+    `사용자요청: ${query || "없음"}`,
     `후보: ${JSON.stringify(allowed)}`,
     `FearGreed: ${JSON.stringify(fearGreed)}`,
     `News: ${JSON.stringify(news.slice(0, 10))}`,
@@ -573,59 +803,285 @@ async function suggestWithGemini({ geminiKey, existingSymbols, news, fred, fearG
 async function analyzeWithGemini({ geminiKey, symbols, news, fred, fearGreed }) {
   const prompt = [
     "당신은 한국어 금융 브리핑 어시스턴트입니다.",
-    "현재 화면 차트 구성과 뉴스/거시지표를 바탕으로 시황을 3~6문장으로 요약하세요.",
-    "불확실하면 단정하지 말고 가능성 표현을 쓰세요.",
-    "출력은 평문 텍스트만 반환하세요.",
+    "아래 데이터로 구조화된 시황 리포트를 만드세요.",
+    "JSON 객체만 반환하세요.",
+    "형식: {\"summary\":\"...\",\"buy\":[\"...\"],\"sell\":[\"...\"],\"themes\":[\"...\"],\"bullish\":[\"...\"],\"bearish\":[\"...\"]}",
+    "buy/sell은 종목명 또는 심볼을 포함해 작성하세요.",
     `심볼: ${JSON.stringify(symbols)}`,
     `FearGreed: ${JSON.stringify(fearGreed)}`,
     `News: ${JSON.stringify(news.slice(0, 10))}`,
     `FRED: ${JSON.stringify(fred)}`,
   ].join("\n");
 
-  const text = await callGeminiText(geminiKey, prompt);
-  return String(text || "").trim();
+  const report = await callGeminiJson(geminiKey, prompt);
+  return normalizeAiReport(report, symbols);
 }
 
-function buildFallbackRecommendations(existingSymbols, fearGreed) {
+function buildFallbackRecommendations(candidates, fearGreed, query) {
   const preferredRiskOn = Number(fearGreed?.value) >= 50;
-  const sorted = [...CANDIDATE_SYMBOLS].sort((a, b) => {
-    const riskOnSet = new Set(["NASDAQ:QQQ", "NASDAQ:NVDA", "AMEX:XLE", "NASDAQ:TSLA"]);
-    const aScore = riskOnSet.has(a.symbol) ? (preferredRiskOn ? 1 : -1) : 0;
-    const bScore = riskOnSet.has(b.symbol) ? (preferredRiskOn ? 1 : -1) : 0;
-    return bScore - aScore;
+  const queryText = String(query || "").trim();
+  const sorted = [...(Array.isArray(candidates) ? candidates : [])].sort((a, b) => {
+    const queryScore = scoreCandidateByQuery(b, queryText) - scoreCandidateByQuery(a, queryText);
+    if (queryScore !== 0) return queryScore;
+
+    const aRisk = RISK_ON_SYMBOLS.has(a.symbol) ? (preferredRiskOn ? 1 : -1) : 0;
+    const bRisk = RISK_ON_SYMBOLS.has(b.symbol) ? (preferredRiskOn ? 1 : -1) : 0;
+    if (bRisk !== aRisk) return bRisk - aRisk;
+
+    return String(a.symbol).localeCompare(String(b.symbol));
   });
 
-  return sorted
-    .filter((item) => !existingSymbols.has(item.symbol))
-    .slice(0, 8)
-    .map((item) => ({
-      symbol: item.symbol,
-      title: item.title,
-      reason: `${item.reason} 기반 기본 추천`,
-    }));
+  return sorted.slice(0, 8).map((item) => ({
+    symbol: item.symbol,
+    title: item.title,
+    reason: `${item.reason} 기반 기본 추천`,
+  }));
 }
 
-function buildFallbackAnalysis({ symbols, news, fred, fearGreed }) {
-  const fearText = fearGreed
-    ? `Fear & Greed는 ${fearGreed.value}(${fearGreed.classification}) 수준입니다.`
-    : "Fear & Greed 데이터는 현재 지연 중입니다.";
+function buildFallbackReport({ symbols, news, fred, fearGreed }) {
+  const riskOn = Number(fearGreed?.value) >= 50;
+  const symbolSet = new Set((Array.isArray(symbols) ? symbols : []).map((symbol) => String(symbol || "").toUpperCase()));
+  const scoped =
+    CANDIDATE_SYMBOLS.filter((item) => symbolSet.has(item.symbol)).length > 0
+      ? CANDIDATE_SYMBOLS.filter((item) => symbolSet.has(item.symbol))
+      : CANDIDATE_SYMBOLS;
 
-  const newsText = news.length
-    ? `주요 뉴스는 ${news.slice(0, 2).join(" / ")} 흐름이 관찰됩니다.`
-    : "뉴스 피드는 일시적으로 비어 있어 가격 반응 중심으로 해석이 필요합니다.";
+  const buyPool = scoped.filter((item) =>
+    riskOn
+      ? item.tags?.includes("risk-on") || item.tags?.includes("ai") || item.tags?.includes("semiconductor")
+      : item.tags?.includes("risk-off") || item.tags?.includes("bond") || item.tags?.includes("large-cap")
+  );
+  const sellPool = scoped.filter((item) =>
+    riskOn
+      ? item.tags?.includes("risk-off") || item.tags?.includes("dollar")
+      : item.tags?.includes("risk-on") || item.tags?.includes("high-beta")
+  );
 
-  const fredText = fred.length
-    ? `거시 지표(FRED)에서는 ${fred
-        .slice(0, 2)
-        .map((item) => `${item.seriesId}:${item.value}`)
-        .join(", ")} 값이 최근 상태로 확인됩니다.`
-    : "거시 지표 수집이 지연되어 방향성 판단 신뢰도가 낮습니다.";
+  const summary = fearGreed
+    ? `Fear & Greed ${fearGreed.value}(${fearGreed.classification}) 기준으로 ${riskOn ? "위험선호" : "방어"} 우위 흐름입니다.`
+    : "Fear & Greed 데이터 지연 상태로 보수적 해석이 필요합니다.";
 
-  const symbolText = symbols.length
-    ? `현재 레이아웃은 ${symbols.slice(0, 8).join(", ")} 중심으로 구성되어 있어 위험자산과 금리 민감도를 함께 점검하기에 적합합니다.`
-    : "현재 차트 심볼이 없어 분석 범위가 제한됩니다.";
+  const report = {
+    summary,
+    buy: buyPool.slice(0, 3).map(formatRecommendationLine),
+    sell: sellPool.slice(0, 3).map(formatRecommendationLine),
+    themes: collectThemes(news, scoped),
+    bullish: buildBullishPoints(fearGreed, fred, news),
+    bearish: buildBearishPoints(fearGreed, fred, news),
+  };
 
-  return `${fearText}\n${newsText}\n${fredText}\n${symbolText}`;
+  return normalizeAiReport(report, symbols);
+}
+
+function normalizeAiReport(raw, symbols) {
+  const report = raw && typeof raw === "object" ? raw : {};
+  const fallbackSummary = Array.isArray(symbols) && symbols.length
+    ? `${symbols.slice(0, 6).join(", ")} 중심으로 현재 시장 흐름을 점검했습니다.`
+    : "현재 가용 데이터 기준으로 시장 흐름을 요약했습니다.";
+
+  return {
+    summary: String(report.summary || fallbackSummary).trim() || fallbackSummary,
+    buy: normalizeReportList(report.buy),
+    sell: normalizeReportList(report.sell),
+    themes: normalizeReportList(report.themes),
+    bullish: normalizeReportList(report.bullish),
+    bearish: normalizeReportList(report.bearish),
+  };
+}
+
+function normalizeReportList(value) {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+      if (!item || typeof item !== "object") return "";
+
+      const symbol = String(item.symbol || "").trim().toUpperCase();
+      const title = String(item.title || "").trim();
+      const reason = String(item.reason || "").trim();
+      return [symbol || title, reason].filter(Boolean).join(" - ");
+    })
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function buildLegacyAnalysisText(report) {
+  return [
+    `[요약] ${report.summary}`,
+    `[매수 추천] ${toInlineList(report.buy)}`,
+    `[매도 추천] ${toInlineList(report.sell)}`,
+    `[주목 테마] ${toInlineList(report.themes)}`,
+    `[긍정 관점] ${toInlineList(report.bullish)}`,
+    `[부정 관점] ${toInlineList(report.bearish)}`,
+  ].join("\n");
+}
+
+function toInlineList(items) {
+  if (!Array.isArray(items) || !items.length) return "데이터 없음";
+  return items.join(" / ");
+}
+
+function formatRecommendationLine(item) {
+  return `${item.symbol} (${item.title}) - ${item.reason}`;
+}
+
+function collectThemes(news, scoped) {
+  const text = `${Array.isArray(news) ? news.join(" ") : ""} ${scoped.map((item) => item.title).join(" ")}`
+    .toLowerCase();
+  const themes = [];
+
+  if (text.includes("ai") || text.includes("반도체")) themes.push("AI/반도체");
+  if (text.includes("oil") || text.includes("에너지")) themes.push("에너지");
+  if (text.includes("inflation") || text.includes("cpi")) themes.push("인플레이션/금리");
+  if (text.includes("korea") || text.includes("한국") || scoped.some((item) => item.tags?.includes("kr"))) {
+    themes.push("한국 대형주");
+  }
+
+  return themes.length ? themes.slice(0, 4) : ["거시 민감자산 로테이션"];
+}
+
+function buildBullishPoints(fearGreed, fred, news) {
+  const points = [];
+  if (Number(fearGreed?.value) >= 50) points.push("심리 지표가 위험선호 구간으로 복귀했습니다.");
+  if (Array.isArray(news) && news.some((item) => /ai|earnings|growth/i.test(item))) {
+    points.push("성장/AI 관련 뉴스 흐름이 위험자산 선호를 지지합니다.");
+  }
+  if (Array.isArray(fred) && fred.some((item) => item.seriesId === "DGS10")) {
+    points.push("금리 레벨 변화가 밸류에이션 재평가 기회를 만들 수 있습니다.");
+  }
+  return points.length ? points.slice(0, 4) : ["과매도 구간 반등 가능성에 유의합니다."];
+}
+
+function buildBearishPoints(fearGreed, fred, news) {
+  const points = [];
+  if (Number(fearGreed?.value) < 50) points.push("심리 지표가 방어 구간에 머물러 변동성 확대 위험이 있습니다.");
+  if (Array.isArray(news) && news.some((item) => /inflation|tariff|war|recession|긴축/i.test(item))) {
+    points.push("거시 불확실성 뉴스가 리스크 프리미엄을 높일 수 있습니다.");
+  }
+  if (Array.isArray(fred) && fred.some((item) => item.seriesId === "FEDFUNDS")) {
+    points.push("정책금리 경로 불확실성은 성장주 변동성을 키울 수 있습니다.");
+  }
+  return points.length ? points.slice(0, 4) : ["데이터 공백 구간에서는 추격 매수보다 분할 대응이 유리합니다."];
+}
+
+function getQueryScopedCandidates(query, existingSymbols) {
+  const text = String(query || "").trim();
+  const available = CANDIDATE_SYMBOLS.filter((item) => !existingSymbols.has(item.symbol));
+  if (!text) return available;
+
+  const scored = available
+    .map((item) => ({ item, score: scoreCandidateByQuery(item, text) }))
+    .sort((a, b) => b.score - a.score)
+    .map((entry) => entry.item);
+
+  const hasPositive = available.some((item) => scoreCandidateByQuery(item, text) > 0);
+  return hasPositive ? scored : available;
+}
+
+function scoreCandidateByQuery(item, query) {
+  const text = String(query || "").toLowerCase().trim();
+  if (!text) return 0;
+
+  const tokens = text.split(/\s+/).filter(Boolean);
+  const haystack = [
+    String(item.symbol || "").toLowerCase(),
+    String(item.title || "").toLowerCase(),
+    String(item.reason || "").toLowerCase(),
+    ...(Array.isArray(item.tags) ? item.tags.map((value) => String(value || "").toLowerCase()) : []),
+    ...(Array.isArray(item.aliases) ? item.aliases.map((value) => String(value || "").toLowerCase()) : []),
+  ].join(" ");
+
+  let score = haystack.includes(text) ? 8 : 0;
+  tokens.forEach((token) => {
+    if (haystack.includes(token)) score += 2;
+  });
+
+  if ((text.includes("한국") || text.includes("kr") || text.includes("korea")) && item.tags?.includes("kr")) {
+    score += 6;
+  }
+  if ((text.includes("거래량") || text.includes("volume")) && item.tags?.includes("volume")) {
+    score += 5;
+  }
+  if ((text.includes("ai") || text.includes("반도체")) && (item.tags?.includes("ai") || item.tags?.includes("semiconductor"))) {
+    score += 4;
+  }
+
+  return score;
+}
+
+function searchLocalSymbols(query, limit) {
+  const text = String(query || "").trim();
+  const pool = getQueryScopedCandidates(text, new Set());
+  return pool.slice(0, limit).map((item) => {
+    const [exchange] = String(item.symbol).split(":");
+    return {
+      symbol: item.symbol,
+      title: item.title,
+      exchange: exchange || "",
+      source: "catalog",
+      reason: item.reason,
+    };
+  });
+}
+
+async function searchYahooSymbols(query, limit) {
+  if (!query || limit <= 0) return [];
+
+  const endpoint = new URL("https://query1.finance.yahoo.com/v1/finance/search");
+  endpoint.searchParams.set("q", query);
+  endpoint.searchParams.set("quotesCount", String(Math.max(limit * 2, 8)));
+  endpoint.searchParams.set("newsCount", "0");
+
+  const payload = await fetchJson(endpoint.toString(), {
+    headers: { "User-Agent": "Mozilla/5.0" },
+  });
+
+  const quotes = Array.isArray(payload?.quotes) ? payload.quotes : [];
+  const results = [];
+  for (const quote of quotes) {
+    const symbol = mapYahooQuoteToTradingViewSymbol(quote);
+    if (!symbol) continue;
+
+    results.push({
+      symbol,
+      title: String(quote.longname || quote.shortname || symbol),
+      exchange: String(symbol.split(":")[0] || ""),
+      source: "yahoo",
+      reason: "Yahoo 검색 결과",
+    });
+    if (results.length >= limit) break;
+  }
+
+  return results;
+}
+
+function mapYahooQuoteToTradingViewSymbol(quote) {
+  const quoteType = String(quote?.quoteType || "").toUpperCase();
+  if (!["EQUITY", "ETF", "INDEX"].includes(quoteType)) return null;
+
+  const raw = String(quote?.symbol || "").trim().toUpperCase();
+  if (!raw) return null;
+
+  const exchange = String(quote?.exchange || "").toUpperCase();
+  let tvExchange = YAHOO_TO_TRADINGVIEW_EXCHANGE[exchange] || "";
+  let ticker = raw;
+
+  if (!tvExchange && (raw.endsWith(".KS") || raw.endsWith(".KQ"))) {
+    tvExchange = "KRX";
+  }
+  if (tvExchange === "KRX") {
+    ticker = raw.replace(/\.(KS|KQ)$/i, "");
+  } else if (raw.includes(".")) {
+    return null;
+  }
+
+  if (!tvExchange && raw && !raw.includes(".")) {
+    tvExchange = "NASDAQ";
+  }
+
+  if (!tvExchange || !ticker) return null;
+  return `${tvExchange}:${ticker}`;
 }
 
 async function callGeminiJson(apiKey, prompt) {

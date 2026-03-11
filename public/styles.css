@@ -94,6 +94,10 @@ h1 {
   flex-wrap: wrap;
 }
 
+.header-timeframe {
+  margin-left: 4px;
+}
+
 .layout-switcher {
   display: flex;
   align-items: center;
@@ -441,11 +445,100 @@ h2 {
   color: var(--text-muted);
   font-size: 13px;
   line-height: 1.55;
-  white-space: pre-wrap;
 }
 
 .ai-analysis.partial {
   color: #ffcb8c;
+}
+
+.ai-report {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.ai-report-summary {
+  margin: 0;
+}
+
+.ai-report-block {
+  border: 1px solid rgba(149, 163, 196, 0.2);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: rgba(6, 10, 16, 0.55);
+}
+
+.ai-report-block h3 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  color: var(--text);
+}
+
+.ai-report-block ul {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.ai-report-block li {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.inline-field-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.inline-field-row .field-input {
+  flex: 1;
+}
+
+.symbol-search-results {
+  margin-top: 8px;
+  max-height: 180px;
+  overflow: auto;
+  border: 1px solid rgba(149, 163, 196, 0.24);
+  border-radius: 10px;
+  background: rgba(6, 10, 16, 0.5);
+}
+
+.symbol-search-item {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid rgba(149, 163, 196, 0.14);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+
+.symbol-search-item:last-child {
+  border-bottom: none;
+}
+
+.symbol-search-item:hover {
+  background: rgba(84, 210, 255, 0.08);
+}
+
+.symbol-search-title {
+  margin: 0;
+  font-size: 12px;
+}
+
+.symbol-search-meta {
+  margin: 2px 0 0;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.symbol-search-empty {
+  margin: 0;
+  padding: 10px;
+  font-size: 12px;
+  color: var(--text-muted);
 }
 
 .ticker-host {
@@ -648,6 +741,14 @@ h2 {
 
   .layout-toolbar-right {
     justify-content: flex-start;
+  }
+
+  .inline-field-row {
+    flex-wrap: wrap;
+  }
+
+  .inline-field-row .btn {
+    width: 100%;
   }
 
   .ticker-floating {

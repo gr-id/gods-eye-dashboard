@@ -9,8 +9,9 @@ const TICKER_SYMBOL_ALIASES = {
 };
 
 const API_BASE = "/api";
-const ALLOWED_CHART_INTERVALS = new Set(["W", "D", "60"]);
+const ALLOWED_CHART_INTERVALS = new Set(["30", "W", "D", "M", "60"]);
 const ALLOWED_SECTION_TYPES = new Set(["chart", "fng", "ai", "metric"]);
+const DEFAULT_AI_MESSAGE = "분석 버튼을 누르면 구조화된 시황 요약을 제공합니다.";
 
 const DEFAULT_LAYOUT_SECTIONS = [
   {
@@ -102,7 +103,7 @@ const DEFAULT_LAYOUT_STORE = {
       id: "layout-main",
       name: "기본 레이아웃",
       settings: {
-        chartInterval: "60",
+        chartInterval: "30",
       },
       sections: DEFAULT_LAYOUT_SECTIONS,
     },
@@ -125,8 +126,11 @@ const state = {
   adminPin: null,
   dragSourceId: null,
   aiSuggestions: [],
-  aiAnalysis: "분석 버튼을 누르면 현재 차트 구성 기반으로 시황 요약을 제공합니다.",
+  aiAnalysis: DEFAULT_AI_MESSAGE,
+  aiReport: null,
   aiAnalysisPartial: false,
+  aiQuery: "",
+  symbolSearchResults: [],
   fearGreedTimerId: null,
   fearGreedInFlight: false,
   lastFearGreedData: null,
@@ -185,6 +189,9 @@ function bindRefs() {
   refs.sectionModalCancel = document.getElementById("section-modal-cancel");
 
   refs.symbolModal = document.getElementById("symbol-modal");
+  refs.symbolSearchInput = document.getElementById("symbol-search-input");
+  refs.symbolSearchBtn = document.getElementById("symbol-search-btn");
+  refs.symbolSearchResults = document.getElementById("symbol-search-results");
   refs.symbolInput = document.getElementById("symbol-input");
   refs.titleInput = document.getElementById("title-input");
   refs.symbolModalError = document.getElementById("symbol-modal-error");
@@ -192,6 +199,8 @@ function bindRefs() {
   refs.symbolModalCancel = document.getElementById("symbol-modal-cancel");
 
   refs.aiModal = document.getElementById("ai-modal");
+  refs.aiQueryInput = document.getElementById("ai-query-input");
+  refs.aiQuerySubmit = document.getElementById("ai-query-submit");
   refs.aiModalStatus = document.getElementById("ai-modal-status");
   refs.aiSuggestList = document.getElementById("ai-suggest-list");
   refs.aiModalApply = document.getElementById("ai-modal-apply");
@@ -217,16 +226,27 @@ function bindGlobalEvents() {
 
   refs.timeframeBtns.forEach((button) => {
     button.addEventListener("click", () => {
-      if (!state.layoutMode) return;
       setActiveLayoutInterval(button.dataset.interval);
     });
   });
 
   refs.symbolModalSubmit.addEventListener("click", onSubmitManualSymbol);
   refs.symbolModalCancel.addEventListener("click", () => closeModal("symbol"));
+  refs.symbolSearchBtn.addEventListener("click", onSearchSymbol);
+  refs.symbolSearchInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    onSearchSymbol();
+  });
 
   refs.aiModalApply.addEventListener("click", applyAiSelections);
   refs.aiModalCancel.addEventListener("click", () => closeModal("ai"));
+  refs.aiQuerySubmit.addEventListener("click", () => fetchAiSuggestions());
+  refs.aiQueryInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") return;
+    event.preventDefault();
+    fetchAiSuggestions();
+  });
 
   document.querySelectorAll("[data-close-modal]").forEach((node) => {
     node.addEventListener("click", (event) => {
@@ -314,7 +334,7 @@ function updateTimeframeButtons(activeLayout) {
   refs.timeframeBtns.forEach((button) => {
     const isActive = button.dataset.interval === interval;
     button.classList.toggle("active", isActive);
-    button.disabled = !state.layoutMode;
+    button.disabled = false;
   });
 }
 function createSectionCard(section) {
@@ -393,7 +413,7 @@ function createSectionCard(section) {
         </div>
       </div>
       <div class="ai-card-body">
-        <p class="ai-analysis ai-analysis-text">${escapeHtml(state.aiAnalysis)}</p>
+        <div class="ai-analysis ai-analysis-text">${escapeHtml(state.aiAnalysis)}</div>
       </div>
     `;
     return card;
@@ -632,7 +652,7 @@ function onCreateLayout() {
     {
       id: makeId("layout"),
       name: `레이아웃 ${store.layouts.length + 1}`,
-      settings: { chartInterval: "60" },
+      settings: { chartInterval: "30" },
       sections: duplicateSectionsWithNewIds(DEFAULT_LAYOUT_STORE.layouts[0].sections),
     },
     store.layouts.length
@@ -712,7 +732,7 @@ function onDeleteActiveLayout() {
 }
 
 function setActiveLayoutInterval(interval) {
-  const activeLayout = getEditableActiveLayout();
+  const activeLayout = getActiveLayout();
   if (!activeLayout) return;
 
   activeLayout.settings = activeLayout.settings || {};
@@ -764,9 +784,74 @@ function openSymbolModal() {
   refs.symbolModal.hidden = false;
   refs.symbolModalError.hidden = true;
   refs.symbolModalError.textContent = "";
+  refs.symbolSearchInput.value = "";
   refs.symbolInput.value = "";
   refs.titleInput.value = "";
-  refs.symbolInput.focus();
+  state.symbolSearchResults = [];
+  renderSymbolSearchResults();
+  refs.symbolSearchInput.focus();
+  onSearchSymbol();
+}
+
+async function onSearchSymbol() {
+  const query = String(refs.symbolSearchInput.value || "").trim();
+
+  refs.symbolModalError.hidden = true;
+  refs.symbolModalError.textContent = "";
+  refs.symbolSearchBtn.disabled = true;
+  refs.symbolSearchResults.innerHTML = `<p class="symbol-search-empty">검색 중...</p>`;
+
+  try {
+    const response = await apiRequest("/symbols/search", {
+      method: "POST",
+      body: { query, limit: 10 },
+    });
+
+    state.symbolSearchResults = Array.isArray(response.results) ? response.results : [];
+    renderSymbolSearchResults();
+  } catch (error) {
+    state.symbolSearchResults = [];
+    refs.symbolModalError.hidden = false;
+    refs.symbolModalError.textContent = error.message || "심볼 검색 호출에 실패했습니다.";
+    renderSymbolSearchResults();
+  } finally {
+    refs.symbolSearchBtn.disabled = false;
+  }
+}
+
+function renderSymbolSearchResults() {
+  if (!refs.symbolSearchResults) return;
+
+  if (!state.symbolSearchResults.length) {
+    refs.symbolSearchResults.innerHTML = `<p class="symbol-search-empty">검색 결과가 없습니다.</p>`;
+    return;
+  }
+
+  refs.symbolSearchResults.innerHTML = state.symbolSearchResults
+    .map((item, index) => {
+      const title = escapeHtml(item.title || item.symbol || "");
+      const symbol = escapeHtml(item.symbol || "");
+      const source = escapeHtml(item.source || "catalog");
+      return `
+        <button class="symbol-search-item" type="button" data-symbol-index="${index}">
+          <p class="symbol-search-title">${title}</p>
+          <p class="symbol-search-meta">${symbol} · ${source}</p>
+        </button>
+      `;
+    })
+    .join("");
+
+  refs.symbolSearchResults.querySelectorAll("[data-symbol-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const index = Number(button.getAttribute("data-symbol-index"));
+      const item = state.symbolSearchResults[index];
+      if (!item) return;
+      refs.symbolInput.value = String(item.symbol || "").toUpperCase();
+      refs.titleInput.value = String(item.title || item.symbol || "");
+      refs.symbolModalError.hidden = true;
+      refs.symbolModalError.textContent = "";
+    });
+  });
 }
 
 function closeModal(name) {
@@ -819,17 +904,27 @@ function onSubmitManualSymbol() {
 }
 
 async function openAiModal() {
+  refs.aiModal.hidden = false;
+  refs.aiQueryInput.value = state.aiQuery || "";
+  await fetchAiSuggestions();
+}
+
+async function fetchAiSuggestions() {
   const activeLayout = getEditableActiveLayout() || getActiveLayout();
   if (!activeLayout) return;
 
-  refs.aiModal.hidden = false;
+  state.aiQuery = String(refs.aiQueryInput.value || "").trim();
   refs.aiModalStatus.textContent = "추천 목록을 준비하는 중입니다.";
   refs.aiSuggestList.innerHTML = "";
+  refs.aiQuerySubmit.disabled = true;
 
   try {
     const response = await apiRequest("/ai/suggest-symbols", {
       method: "POST",
-      body: { sections: activeLayout.sections },
+      body: {
+        sections: activeLayout.sections,
+        query: state.aiQuery,
+      },
     });
 
     state.aiSuggestions = Array.isArray(response.recommendations) ? response.recommendations : [];
@@ -838,27 +933,36 @@ async function openAiModal() {
       return;
     }
 
-    refs.aiModalStatus.textContent = response.partial
-      ? "일부 외부 데이터 수집이 지연되어 부분 추천으로 표시됩니다."
+    const baseStatus = state.aiQuery
+      ? `"${state.aiQuery}" 요청 기반 추천 결과입니다.`
       : "오늘 시황 기반 추천 심볼입니다.";
+    refs.aiModalStatus.textContent = response.partial
+      ? `${baseStatus} 일부 외부 데이터 수집이 지연되어 부분 추천으로 표시됩니다.`
+      : baseStatus;
 
-    refs.aiSuggestList.innerHTML = state.aiSuggestions
-      .map((item, index) => {
-        return `
-          <label class="ai-suggest-item">
-            <input type="checkbox" class="ai-suggest-check" data-index="${index}" checked />
-            <div>
-              <p class="ai-suggest-title">${escapeHtml(item.title || item.symbol)}</p>
-              <p class="ai-suggest-symbol">${escapeHtml(item.symbol || "")}</p>
-              <p class="ai-suggest-reason">${escapeHtml(item.reason || "")}</p>
-            </div>
-          </label>
-        `;
-      })
-      .join("");
+    refs.aiSuggestList.innerHTML = buildAiSuggestionListHtml(state.aiSuggestions);
   } catch (error) {
     refs.aiModalStatus.textContent = error.message || "AI 추천 호출에 실패했습니다.";
+  } finally {
+    refs.aiQuerySubmit.disabled = false;
   }
+}
+
+function buildAiSuggestionListHtml(items) {
+  return items
+    .map((item, index) => {
+      return `
+        <label class="ai-suggest-item">
+          <input type="checkbox" class="ai-suggest-check" data-index="${index}" checked />
+          <div>
+            <p class="ai-suggest-title">${escapeHtml(item.title || item.symbol)}</p>
+            <p class="ai-suggest-symbol">${escapeHtml(item.symbol || "")}</p>
+            <p class="ai-suggest-reason">${escapeHtml(item.reason || "")}</p>
+          </div>
+        </label>
+      `;
+    })
+    .join("");
 }
 
 function applyAiSelections() {
@@ -907,7 +1011,12 @@ function applyAiSelections() {
 
 function renderAiSectionText() {
   refs.grid.querySelectorAll(".ai-analysis-text").forEach((node) => {
-    node.textContent = state.aiAnalysis;
+    if (state.aiReport) {
+      node.innerHTML = buildAiReportHtml(state.aiReport);
+    } else {
+      const safeText = escapeHtml(state.aiAnalysis).replaceAll("\n", "<br />");
+      node.innerHTML = `<p class="ai-report-summary">${safeText}</p>`;
+    }
     node.classList.toggle("partial", Boolean(state.aiAnalysisPartial));
   });
 }
@@ -926,10 +1035,12 @@ async function runAiAnalysis() {
     });
 
     state.aiAnalysis = response.analysis || "분석 결과가 없습니다.";
+    state.aiReport = normalizeAiReportFromApi(response.report);
     state.aiAnalysisPartial = Boolean(response.partial);
     renderAiSectionText();
   } catch (error) {
     state.aiAnalysis = error.message || "분석 요청에 실패했습니다.";
+    state.aiReport = null;
     state.aiAnalysisPartial = true;
     renderAiSectionText();
   } finally {
@@ -938,6 +1049,58 @@ async function runAiAnalysis() {
       button.textContent = "분석";
     });
   }
+}
+
+function normalizeAiReportFromApi(report) {
+  if (!report || typeof report !== "object") return null;
+
+  const normalizeList = (value) => {
+    if (!Array.isArray(value)) return [];
+    return value
+      .map((item) => String(item || "").trim())
+      .filter(Boolean)
+      .slice(0, 8);
+  };
+
+  return {
+    summary: String(report.summary || "").trim(),
+    buy: normalizeList(report.buy),
+    sell: normalizeList(report.sell),
+    themes: normalizeList(report.themes),
+    bullish: normalizeList(report.bullish),
+    bearish: normalizeList(report.bearish),
+  };
+}
+
+function buildAiReportHtml(report) {
+  const blocks = [
+    { title: "매수 추천", items: report.buy },
+    { title: "매도 추천", items: report.sell },
+    { title: "주목 테마", items: report.themes },
+    { title: "긍정 관점", items: report.bullish },
+    { title: "부정 관점", items: report.bearish },
+  ];
+
+  const body = blocks
+    .map((block) => {
+      const items = Array.isArray(block.items) && block.items.length ? block.items : ["데이터 없음"];
+      const lines = items.map((item) => `<li>${escapeHtml(item)}</li>`).join("");
+      return `
+        <section class="ai-report-block">
+          <h3>${escapeHtml(block.title)}</h3>
+          <ul>${lines}</ul>
+        </section>
+      `;
+    })
+    .join("");
+
+  const summary = escapeHtml(report.summary || state.aiAnalysis || DEFAULT_AI_MESSAGE);
+  return `
+    <div class="ai-report">
+      <p class="ai-report-summary">${summary}</p>
+      ${body}
+    </div>
+  `;
 }
 
 async function loadLayoutFromServer() {
@@ -1409,12 +1572,14 @@ function inferIntervalFromSections(sections) {
 }
 
 function normalizeChartInterval(value) {
-  const interval = String(value || "60").toUpperCase();
+  const interval = String(value || "30").toUpperCase();
   if (interval === "1W") return "W";
   if (interval === "1D") return "D";
+  if (interval === "1M" || interval === "1MO" || interval === "MO") return "M";
+  if (interval === "30M" || interval === "30MIN" || interval === "M30") return "30";
   if (interval === "1H" || interval === "H") return "60";
   if (ALLOWED_CHART_INTERVALS.has(interval)) return interval;
-  return "60";
+  return "30";
 }
 
 function normalizeMetricKey(metricKey) {
